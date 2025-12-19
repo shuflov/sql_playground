@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import scrolledtext, messagebox, simpledialog
 import pyodbc
 import json
+from database import execute_query
 
 SNIPPETS_FILE = "snippets.json"
 
@@ -117,81 +118,6 @@ def save_current_as_snippet():
     refresh_snippet_list()
     messagebox.showinfo("Success", f"Snippet '{name}' saved!")
 
-# ------------------- Query Execution -------------------
-def run_query():
-    query = query_text.get("1.0", tk.END).strip()
-    if not query:
-        messagebox.showwarning("Warning", "Enter a query first!")
-        return
-
-    output_text.config(state=tk.NORMAL)
-    output_text.delete("1.0", tk.END)
-
-    conn_str = (
-        "DRIVER={ODBC Driver 18 for SQL Server};"
-        "SERVER=localhost\\SQLEXPRESS;"
-        "DATABASE=test;"
-        "Trusted_Connection=yes;"
-        "Encrypt=yes;"
-        "TrustServerCertificate=yes;"
-    )
-
-    try:
-        conn = pyodbc.connect(conn_str, autocommit=True)
-        cursor = conn.cursor()
-        cursor.execute(query)
-
-        output_text.insert(tk.END, "Query executed successfully.\n\n")
-
-        result_set_number = 1
-        has_results = False
-
-        while True:
-            if cursor.description:
-                has_results = True
-                columns = [column[0] for column in cursor.description]
-                rows = cursor.fetchall()
-
-                if rows:
-                    data = [[str(item) if item is not None else "NULL" for item in row] for row in rows]
-                    col_widths = [len(col) for col in columns]
-                    for row in data:
-                        for i, val in enumerate(row):
-                            col_widths[i] = max(col_widths[i], len(val))
-
-                    output_text.insert(tk.END, f"--- Result Set {result_set_number} ({len(rows)} rows) ---\n")
-                    header = "  ".join(f"{col:<{w}}" for col, w in zip(columns, col_widths))
-                    output_text.insert(tk.END, header + "\n")
-                    output_text.insert(tk.END, "-" * len(header) + "\n")
-
-                    for row in data:
-                        line = "  ".join(f"{val:<{w}}" for val, w in zip(row, col_widths))
-                        output_text.insert(tk.END, line + "\n")
-                    output_text.insert(tk.END, "\n")
-                else:
-                    output_text.insert(tk.END, f"--- Result Set {result_set_number} (0 rows) ---\n")
-                    header = "  ".join(col.ljust(10) for col in columns)
-                    output_text.insert(tk.END, header + "\n")
-                    output_text.insert(tk.END, "-" * len(header) + "\n\n")
-
-                result_set_number += 1
-
-            if not cursor.nextset():
-                break
-
-        if not has_results and cursor.rowcount >= 0:
-            output_text.insert(tk.END, f"Rows affected: {cursor.rowcount}\n")
-
-        cursor.close()
-        conn.close()
-
-    except pyodbc.Error as e:
-        output_text.insert(tk.END, "Error:\n" + str(e) + "\n")
-    except Exception as e:
-        output_text.insert(tk.END, "Unexpected error:\n" + str(e) + "\n")
-
-    output_text.config(state=tk.DISABLED)
-
 def clear_all():
     query_text.delete("1.0", tk.END)
     output_text.config(state=tk.NORMAL)
@@ -222,7 +148,7 @@ query_text.insert(tk.END, "SELECT TOP 20 * FROM flights")
 
 btn_frame = tk.Frame(left_frame)
 btn_frame.grid(row=2, column=0, sticky="ew", pady=(0,10))
-tk.Button(btn_frame, text="Run Query", command=run_query, width=15).pack(side=tk.LEFT, padx=5)
+tk.Button(btn_frame, text="Run Query", command=lambda: execute_query(query_text.get("1.0", tk.END), output_text), width=15).pack(side=tk.LEFT, padx=5)
 tk.Button(btn_frame, text="Clear", command=clear_all, width=15).pack(side=tk.LEFT, padx=5)
 tk.Button(btn_frame, text="Save as Snippet", command=save_current_as_snippet, width=18).pack(side=tk.LEFT, padx=5)
 
@@ -276,7 +202,7 @@ tk.Button(snippet_btn_frame, text="Edit", command=edit_snippet, width=8).pack(si
 tk.Button(snippet_btn_frame, text="Delete", command=delete_snippet, width=8).pack(side=tk.LEFT, padx=3)
 
 # ------------------- Keyboard Shortcuts -------------------
-root.bind("<Control-Return>", lambda event: run_query())
+root.bind("<Control-Return>", lambda event: execute_query(query_text.get("1.0", tk.END), output_text))
 root.bind("<Control-s>", lambda event: save_current_as_snippet())
 root.bind("<Control-l>", lambda event: clear_all())
 query_text.focus_set()
