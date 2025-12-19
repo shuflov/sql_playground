@@ -228,8 +228,25 @@ tk.Button(btn_frame, text="Save as Snippet", command=save_current_as_snippet, wi
 
 tk.Label(left_frame, text="Query Results:", font=("Arial", 12, "bold")).grid(row=3, column=0, sticky="w", pady=(10,5))
 
-output_text = scrolledtext.ScrolledText(left_frame, height=15, wrap=tk.NONE, state=tk.DISABLED)
-output_text.grid(row=4, column=0, sticky="nsew")
+# Container frame for text + scrollbars
+output_container = tk.Frame(left_frame)
+output_container.grid(row=4, column=0, sticky="nsew")
+output_container.grid_rowconfigure(0, weight=1)
+output_container.grid_columnconfigure(0, weight=1)
+
+# Text widget
+output_text = tk.Text(output_container, height=15, wrap="none", state=tk.DISABLED, font=("Consolas", 10))
+output_text.grid(row=0, column=0, sticky="nsew")
+
+# Vertical scrollbar
+v_scroll = tk.Scrollbar(output_container, orient="vertical", command=output_text.yview)
+v_scroll.grid(row=0, column=1, sticky="ns")
+output_text.configure(yscrollcommand=v_scroll.set)
+
+# Horizontal scrollbar
+h_scroll = tk.Scrollbar(output_container, orient="horizontal", command=output_text.xview)
+h_scroll.grid(row=1, column=0, sticky="ew")
+output_text.configure(xscrollcommand=h_scroll.set)
 
 # Right Frame - Snippets
 right_frame = tk.Frame(root, relief="sunken", bd=2)
