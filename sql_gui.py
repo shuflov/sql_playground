@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import scrolledtext, messagebox, simpledialog
+from tkinter import scrolledtext, messagebox, simpledialog, ttk
 
 from database import execute_query
 from snippets import (
@@ -82,7 +82,6 @@ def save_current_as_snippet_gui():
     if not name:
         return
 
-    # Check for overwrite
     all_snippets = load_snippets()
     overwritten = any(s["name"] == name for s in all_snippets)
     if overwritten and not messagebox.askyesno("Overwrite?", f"A snippet named '{name}' already exists. Overwrite it?"):
@@ -94,9 +93,8 @@ def save_current_as_snippet_gui():
 
 def clear_all():
     query_text.delete("1.0", tk.END)
-    output_text.config(state=tk.NORMAL)
-    output_text.delete("1.0", tk.END)
-    output_text.config(state=tk.DISABLED)
+    for item in output_tree.get_children():
+        output_tree.delete(item)
 
 # ------------------- GUI Setup -------------------
 root = tk.Tk()
@@ -112,7 +110,7 @@ root.grid_rowconfigure(0, weight=1)
 left_frame = tk.Frame(root)
 left_frame.grid(row=0, column=0, sticky="nsew", padx=(10,5), pady=10)
 left_frame.grid_columnconfigure(0, weight=1)
-left_frame.grid_rowconfigure(2, weight=1)  # Buttons row doesn't grow
+left_frame.grid_rowconfigure(4, weight=1)
 
 tk.Label(left_frame, text="Enter SQL Query:", font=("Arial", 12, "bold")).grid(row=0, column=0, sticky="w", pady=(0,5))
 
@@ -123,36 +121,45 @@ query_text.insert(tk.END, "SELECT TOP 20 * FROM flights")
 # Buttons
 btn_frame = tk.Frame(left_frame)
 btn_frame.grid(row=2, column=0, sticky="ew", pady=(0,10))
-tk.Button(btn_frame, text="Run Query", command=lambda: execute_query(query_text.get("1.0", tk.END), output_text), width=15).pack(side=tk.LEFT, padx=5)
+# Added .strip() to the query text
+tk.Button(btn_frame, text="Run Query", command=lambda: execute_query(query_text.get("1.0", tk.END).strip(), output_tree), width=15).pack(side=tk.LEFT, padx=5)
 tk.Button(btn_frame, text="Clear", command=clear_all, width=15).pack(side=tk.LEFT, padx=5)
 tk.Button(btn_frame, text="Save as Snippet", command=save_current_as_snippet_gui, width=18).pack(side=tk.LEFT, padx=5)
 
 tk.Label(left_frame, text="Query Results:", font=("Arial", 12, "bold")).grid(row=3, column=0, sticky="w", pady=(10,5))
 
-# Output with horizontal + vertical scrolling
-output_container = tk.Frame(left_frame)
-output_container.grid(row=4, column=0, sticky="nsew")
-output_container.grid_rowconfigure(0, weight=1)
-output_container.grid_columnconfigure(0, weight=1)
+# Treeview results table
+tree_container = tk.Frame(left_frame)
+tree_container.grid(row=4, column=0, sticky="nsew")
+tree_container.grid_rowconfigure(0, weight=1)
+tree_container.grid_columnconfigure(0, weight=1)
 
-output_text = tk.Text(output_container, height=15, wrap="none", state=tk.DISABLED, font=("Consolas", 10))
-output_text.grid(row=0, column=0, sticky="nsew")
+v_scroll = tk.Scrollbar(tree_container, orient="vertical")
+h_scroll = tk.Scrollbar(tree_container, orient="horizontal")
 
-v_scroll = tk.Scrollbar(output_container, orient="vertical", command=output_text.yview)
+output_tree = ttk.Treeview(tree_container, yscrollcommand=v_scroll.set, xscrollcommand=h_scroll.set, show="headings", selectmode="none")
+output_tree.grid(row=0, column=0, sticky="nsew")
+
 v_scroll.grid(row=0, column=1, sticky="ns")
-output_text.configure(yscrollcommand=v_scroll.set)
-
-h_scroll = tk.Scrollbar(output_container, orient="horizontal", command=output_text.xview)
 h_scroll.grid(row=1, column=0, sticky="ew")
-output_text.configure(xscrollcommand=h_scroll.set)
 
-# Right Frame - Snippets
-right_frame = tk.Frame(root, relief="sunken", bd=2)
+v_scroll.config(command=output_tree.yview)
+h_scroll.config(command=output_tree.xview)
+
+# Style
+style = ttk.Style()
+style.theme_use("default")
+style.configure("Treeview", rowheight=25, font=("Consolas", 10))
+style.configure("Treeview.Heading", font=("Arial", 10, "bold"), background="#003366", foreground="white")
+
+# Right Frame - Snippets (FIXED CLAMPING)
+right_frame = tk.Frame(root, relief="sunken", bd=2, width=300) 
+right_frame.pack_propagate(False) 
+right_frame.grid_propagate(False) # <--- ADDED: Critical to keep it from moving in a grid
 right_frame.grid(row=0, column=1, sticky="nsew", padx=(5,10), pady=10)
 
 tk.Label(right_frame, text="My Snippets", font=("Arial", 14, "bold")).pack(pady=(0,10))
 
-# Search
 search_frame = tk.Frame(right_frame)
 search_frame.pack(padx=10, pady=(0,5), fill=tk.X)
 tk.Label(search_frame, text="Search:").pack(side=tk.LEFT)
@@ -160,27 +167,25 @@ search_entry = tk.Entry(search_frame)
 search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(5,0))
 search_entry.bind("<KeyRelease>", filter_snippets)
 
-# Listbox
 snippet_listbox = tk.Listbox(right_frame, width=30, height=20)
 snippet_listbox.pack(padx=10, pady=(0,10), fill=tk.BOTH, expand=True)
 snippet_listbox.bind("<<ListboxSelect>>", load_selected_snippet)
 snippet_listbox.bind("<Double-Button-1>", load_selected_snippet)
 
-# Snippet buttons
 snippet_btn_frame = tk.Frame(right_frame)
 snippet_btn_frame.pack(pady=5)
 tk.Button(snippet_btn_frame, text="Add", command=add_snippet_gui, width=8).pack(side=tk.LEFT, padx=3)
 tk.Button(snippet_btn_frame, text="Edit", command=edit_snippet_gui, width=8).pack(side=tk.LEFT, padx=3)
 tk.Button(snippet_btn_frame, text="Delete", command=delete_snippet_gui, width=8).pack(side=tk.LEFT, padx=3)
 
-# ------------------- Keyboard Shortcuts -------------------
-root.bind("<Control-Return>", lambda event: execute_query(query_text.get("1.0", tk.END), output_text))
+# Keyboard shortcuts (Added .strip())
+root.bind("<Control-Return>", lambda event: execute_query(query_text.get("1.0", tk.END).strip(), output_tree))
 root.bind("<Control-s>", lambda event: save_current_as_snippet_gui())
 root.bind("<Control-l>", lambda event: clear_all())
 query_text.focus_set()
 
 # Startup
-load_snippets()  # Populates current_snippets in snippets.py
+load_snippets()
 refresh_snippet_list()
 
 root.mainloop()

@@ -1,9 +1,8 @@
-# database.py
-import tkinter as tk
 import pyodbc
 from tkinter import messagebox
+import tkinter as tk
 
-# Connection string — central place, easy to change later
+# Database Connection Configuration
 CONN_STR = (
     "DRIVER={ODBC Driver 18 for SQL Server};"
     "SERVER=localhost\\SQLEXPRESS;"
@@ -13,76 +12,89 @@ CONN_STR = (
     "TrustServerCertificate=yes;"
 )
 
-def execute_query(query, output_text):
+def execute_query(query, output_tree):
     """
-    Executes the SQL query and inserts formatted results into output_text.
-    output_text is the Tkinter Text widget from the main GUI.
+    Executes a SQL query and populates the provided ttk.Treeview with results.
     """
+    # 1. Validation
     if not query.strip():
         messagebox.showwarning("Warning", "Enter a query first!")
         return
 
-    # Clear previous results
-    output_text.config(state="normal")
-    output_text.delete("1.0", tk.END)
+    # 2. Clear existing data and reset columns
+    for item in output_tree.get_children():
+        output_tree.delete(item)
+    
+    # Reset columns to avoid "ghost" headers from previous different queries
+    output_tree["columns"] = ()
 
     try:
+        # 3. Establish Connection
         conn = pyodbc.connect(CONN_STR, autocommit=True)
         cursor = conn.cursor()
+        
+        # 4. Execute Query
         cursor.execute(query)
 
-        output_text.insert(tk.END, "Query executed successfully.\n\n")
+        # 5. Handle Results (SELECT statements)
+        if cursor.description:
+            # Extract column names from cursor description
+            cols = [col[0] for col in cursor.description]
+            
+            # Configure Treeview columns
+            output_tree["columns"] = cols
+            output_tree.column("#0", width=0, stretch=tk.NO)  # Hide ghost column
 
-        result_set_number = 1
-        has_results = False
+            for col in cols:
+                output_tree.heading(col, text=col)
+                # stretch=False prevents the columns from expanding the whole window
+                output_tree.column(col, anchor="w", width=150, stretch=False)
 
-        while True:
-            if cursor.description:  # There's a result set (SELECT)
-                has_results = True
-                columns = [column[0] for column in cursor.description]
-                rows = cursor.fetchall()
+            # Fetch and Insert Data
+            rows = cursor.fetchall()
+            for i, row in enumerate(rows):
+                # Convert None to NULL for display, and everything else to string
+                values = [str(item) if item is not None else "NULL" for item in row]
+                tag = "evenrow" if i % 2 == 0 else "oddrow"
+                output_tree.insert("", "end", values=values, tags=(tag,))
+            
+            # Add a summary row at the bottom
+            summary_vals = [f"Count: {len(rows)}"] + [""] * (len(cols) - 1)
+            output_tree.insert("", "end", values=summary_vals, tags=("title",))
 
-                if rows:
-                    # Prepare data
-                    data = [[str(item) if item is not None else "NULL" for item in row] for row in rows]
+        # 6. Handle Non-Select Queries (INSERT, UPDATE, DELETE)
+        else:
+            output_tree["columns"] = ("Message",)
+            output_tree.column("#0", width=0, stretch=tk.NO)
+            output_tree.heading("Message", text="Operation Info")
+            output_tree.column("Message", width=600, stretch=False)
+            
+            rowcount = cursor.rowcount if cursor.rowcount >= 0 else 0
+            output_tree.insert("", "end", values=(f"Success: {rowcount} rows affected.",), tags=("info",))
 
-                    # Calculate column widths
-                    col_widths = [len(col) for col in columns]
-                    for row in data:
-                        for i, val in enumerate(row):
-                            col_widths[i] = max(col_widths[i], len(val))
+        # 7. Multi-statement result cleanup
+        while cursor.nextset():
+            pass
 
-                    # Print result set header and table
-                    output_text.insert(tk.END, f"--- Result Set {result_set_number} ({len(rows)} rows) ---\n")
-                    header = "  ".join(f"{col:<{w}}" for col, w in zip(columns, col_widths))
-                    output_text.insert(tk.END, header + "\n")
-                    output_text.insert(tk.END, "-" * len(header) + "\n")
-
-                    for row in data:
-                        line = "  ".join(f"{val:<{w}}" for val, w in zip(row, col_widths))
-                        output_text.insert(tk.END, line + "\n")
-                    output_text.insert(tk.END, "\n")
-                else:
-                    output_text.insert(tk.END, f"--- Result Set {result_set_number} (0 rows) ---\n")
-                    header = "  ".join(col.ljust(10) for col in columns)
-                    output_text.insert(tk.END, header + "\n")
-                    output_text.insert(tk.END, "-" * len(header) + "\n\n")
-
-                result_set_number += 1
-
-            if not cursor.nextset():
-                break
-
-        if not has_results and cursor.rowcount >= 0:
-            output_text.insert(tk.END, f"Rows affected: {cursor.rowcount}\n")
+        # 8. Apply Visual Tags (Matching your GUI style)
+        output_tree.tag_configure("title", background="#4472c4", foreground="white", font=("Arial", 10, "bold"))
+        output_tree.tag_configure("evenrow", background="#ffffff")
+        output_tree.tag_configure("oddrow", background="#f0f0f0")
+        output_tree.tag_configure("info", foreground="darkgreen", font=("Arial", 10, "italic"))
 
         cursor.close()
         conn.close()
 
     except pyodbc.Error as e:
-        output_text.insert(tk.END, "Error:\n" + str(e) + "\n")
+        # Handle Database Specific Errors (Syntax, Connection, etc.)
+        output_tree["columns"] = ("Error",)
+        output_tree.heading("Error", text="Database Error")
+        output_tree.column("Error", width=800)
+        output_tree.insert("", "end", values=(str(e),))
+        
     except Exception as e:
-        output_text.insert(tk.END, "Unexpected error:\n" + str(e) + "\n")
-
-    finally:
-        output_text.config(state="disabled")
+        # Handle General Python Errors
+        output_tree["columns"] = ("Error",)
+        output_tree.heading("Error", text="System Error")
+        output_tree.column("Error", width=800)
+        output_tree.insert("", "end", values=(str(e),))
