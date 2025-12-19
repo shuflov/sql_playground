@@ -102,8 +102,9 @@ root.title("SQL Training App")
 root.geometry("1200x700")
 root.minsize(1000, 600)
 
-root.grid_columnconfigure(0, weight=3)
-root.grid_columnconfigure(1, weight=1)
+# LOCK THE COLUMNS: Column 0 (Left) grows, Column 1 (Right) stays fixed
+root.grid_columnconfigure(0, weight=1)
+root.grid_columnconfigure(1, weight=0) 
 root.grid_rowconfigure(0, weight=1)
 
 # Left Frame - Query & Results
@@ -121,14 +122,13 @@ query_text.insert(tk.END, "SELECT TOP 20 * FROM flights")
 # Buttons
 btn_frame = tk.Frame(left_frame)
 btn_frame.grid(row=2, column=0, sticky="ew", pady=(0,10))
-# Added .strip() to the query text
 tk.Button(btn_frame, text="Run Query", command=lambda: execute_query(query_text.get("1.0", tk.END).strip(), output_tree), width=15).pack(side=tk.LEFT, padx=5)
 tk.Button(btn_frame, text="Clear", command=clear_all, width=15).pack(side=tk.LEFT, padx=5)
 tk.Button(btn_frame, text="Save as Snippet", command=save_current_as_snippet_gui, width=18).pack(side=tk.LEFT, padx=5)
 
 tk.Label(left_frame, text="Query Results:", font=("Arial", 12, "bold")).grid(row=3, column=0, sticky="w", pady=(10,5))
 
-# Treeview results table
+# Treeview results table container
 tree_container = tk.Frame(left_frame)
 tree_container.grid(row=4, column=0, sticky="nsew")
 tree_container.grid_rowconfigure(0, weight=1)
@@ -152,10 +152,10 @@ style.theme_use("default")
 style.configure("Treeview", rowheight=25, font=("Consolas", 10))
 style.configure("Treeview.Heading", font=("Arial", 10, "bold"), background="#003366", foreground="white")
 
-# Right Frame - Snippets (FIXED CLAMPING)
+# Right Frame - Snippets (LOCKED AT 300PX)
 right_frame = tk.Frame(root, relief="sunken", bd=2, width=300) 
-right_frame.pack_propagate(False) 
-right_frame.grid_propagate(False) # <--- ADDED: Critical to keep it from moving in a grid
+right_frame.grid_propagate(False) # Prevents content from expanding the frame
+right_frame.pack_propagate(False) # Prevents internal widgets from resizing the frame
 right_frame.grid(row=0, column=1, sticky="nsew", padx=(5,10), pady=10)
 
 tk.Label(right_frame, text="My Snippets", font=("Arial", 14, "bold")).pack(pady=(0,10))
@@ -178,7 +178,7 @@ tk.Button(snippet_btn_frame, text="Add", command=add_snippet_gui, width=8).pack(
 tk.Button(snippet_btn_frame, text="Edit", command=edit_snippet_gui, width=8).pack(side=tk.LEFT, padx=3)
 tk.Button(snippet_btn_frame, text="Delete", command=delete_snippet_gui, width=8).pack(side=tk.LEFT, padx=3)
 
-# Keyboard shortcuts (Added .strip())
+# Keyboard shortcuts
 root.bind("<Control-Return>", lambda event: execute_query(query_text.get("1.0", tk.END).strip(), output_tree))
 root.bind("<Control-s>", lambda event: save_current_as_snippet_gui())
 root.bind("<Control-l>", lambda event: clear_all())
