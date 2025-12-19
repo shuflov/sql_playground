@@ -1,100 +1,78 @@
 import tkinter as tk
 from tkinter import scrolledtext, messagebox, simpledialog
-import pyodbc
-import json
+
 from database import execute_query
+from snippets import (
+    load_snippets,
+    get_filtered_snippets,
+    add_snippet,
+    edit_snippet,
+    delete_snippet,
+    save_current_as_snippet
+)
 
-SNIPPETS_FILE = "snippets.json"
-
-# Global list to keep full snippets in memory (for correct search/edit/delete)
-current_snippets = []
-
-# ------------------- Snippet Functions -------------------
-def load_snippets():
-    try:
-        with open(SNIPPETS_FILE, "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return []
-    except json.JSONDecodeError:
-        messagebox.showerror("Error", "Corrupted snippets file. Starting fresh.")
-        return []
-
-def save_snippets(snippets):
-    with open(SNIPPETS_FILE, "w") as f:
-        json.dump(snippets, f, indent=4)
-
+# ------------------- GUI Helper Functions -------------------
 def refresh_snippet_list():
-    global current_snippets
-    current_snippets = load_snippets()
-    
-    search_term = search_entry.get().lower() if 'search_entry' in globals() and search_entry.get() else ""
+    search_term = search_entry.get()
+    filtered = get_filtered_snippets(search_term)
     
     snippet_listbox.delete(0, tk.END)
-    for snippet in current_snippets:
-        if not search_term or search_term in snippet["name"].lower():
-            snippet_listbox.insert(tk.END, snippet["name"])
+    for snippet in filtered:
+        snippet_listbox.insert(tk.END, snippet["name"])
 
 def filter_snippets(event=None):
-    refresh_snippet_list()  # Re-apply filter on every key release
+    refresh_snippet_list()
 
 def load_selected_snippet(event=None):
-    selected_idx = snippet_listbox.curselection()
-    if not selected_idx:
+    selected = snippet_listbox.curselection()
+    if not selected:
         return
-    visible_name = snippet_listbox.get(selected_idx[0])
-    for snippet in current_snippets:
-        if snippet["name"] == visible_name:
+    name = snippet_listbox.get(selected[0])
+    for snippet in get_filtered_snippets(search_entry.get()):
+        if snippet["name"] == name:
             query_text.delete("1.0", tk.END)
             query_text.insert(tk.END, snippet["sql"])
             return
 
-def add_snippet():
+def add_snippet_gui():
     name = simpledialog.askstring("Add Snippet", "Enter snippet name:")
     if not name:
         return
     sql = simpledialog.askstring("Add Snippet", "Enter SQL code:", parent=root)
     if sql is None:
         return
-    
-    global current_snippets
-    current_snippets.append({"name": name, "sql": sql})
-    save_snippets(current_snippets)
+    add_snippet(name, sql)
     refresh_snippet_list()
 
-def edit_snippet():
-    selected_idx = snippet_listbox.curselection()
-    if not selected_idx:
+def edit_snippet_gui():
+    selected = snippet_listbox.curselection()
+    if not selected:
         messagebox.showwarning("Warning", "Select a snippet to edit.")
         return
-    visible_name = snippet_listbox.get(selected_idx[0])
-    
-    for snippet in current_snippets:
-        if snippet["name"] == visible_name:
-            new_name = simpledialog.askstring("Edit Snippet", "New name:", initialvalue=snippet["name"])
-            if new_name:
-                new_sql = simpledialog.askstring("Edit Snippet", "New SQL:", initialvalue=snippet["sql"])
-                if new_sql is not None:
-                    snippet["name"] = new_name
-                    snippet["sql"] = new_sql
-                    save_snippets(current_snippets)
-                    refresh_snippet_list()
+    old_name = snippet_listbox.get(selected[0])
+    snippets = get_filtered_snippets(search_entry.get())
+    for s in snippets:
+        if s["name"] == old_name:
+            new_name = simpledialog.askstring("Edit Snippet", "New name:", initialvalue=s["name"])
+            if not new_name:
+                return
+            new_sql = simpledialog.askstring("Edit Snippet", "New SQL:", initialvalue=s["sql"])
+            if new_sql is not None:
+                edit_snippet(old_name, new_name, new_sql)
+                refresh_snippet_list()
             return
 
-def delete_snippet():
-    selected_idx = snippet_listbox.curselection()
-    if not selected_idx:
+def delete_snippet_gui():
+    selected = snippet_listbox.curselection()
+    if not selected:
         messagebox.showwarning("Warning", "Select a snippet to delete.")
         return
-    visible_name = snippet_listbox.get(selected_idx[0])
-    
-    if messagebox.askyesno("Delete", f"Delete snippet '{visible_name}'?"):
-        global current_snippets
-        current_snippets = [s for s in current_snippets if s["name"] != visible_name]
-        save_snippets(current_snippets)
+    name = snippet_listbox.get(selected[0])
+    if messagebox.askyesno("Delete", f"Delete snippet '{name}'?"):
+        delete_snippet(name)
         refresh_snippet_list()
 
-def save_current_as_snippet():
+def save_current_as_snippet_gui():
     current_sql = query_text.get("1.0", tk.END).strip()
     if not current_sql:
         messagebox.showwarning("Warning", "Query input is empty — nothing to save!")
@@ -104,19 +82,15 @@ def save_current_as_snippet():
     if not name:
         return
 
-    global current_snippets
-    for i, snippet in enumerate(current_snippets):
-        if snippet["name"] == name:
-            if not messagebox.askyesno("Overwrite?", f"A snippet named '{name}' already exists. Overwrite it?"):
-                return
-            current_snippets[i]["sql"] = current_sql
-            break
-    else:
-        current_snippets.append({"name": name, "sql": current_sql})
+    # Check for overwrite
+    all_snippets = load_snippets()
+    overwritten = any(s["name"] == name for s in all_snippets)
+    if overwritten and not messagebox.askyesno("Overwrite?", f"A snippet named '{name}' already exists. Overwrite it?"):
+        return
 
-    save_snippets(current_snippets)
+    save_current_as_snippet(name, current_sql)
     refresh_snippet_list()
-    messagebox.showinfo("Success", f"Snippet '{name}' saved!")
+    messagebox.showinfo("Success", f"Snippet '{name}' saved!" + (" (overwritten)" if overwritten else ""))
 
 def clear_all():
     query_text.delete("1.0", tk.END)
@@ -134,11 +108,11 @@ root.grid_columnconfigure(0, weight=3)
 root.grid_columnconfigure(1, weight=1)
 root.grid_rowconfigure(0, weight=1)
 
-# Left Frame
+# Left Frame - Query & Results
 left_frame = tk.Frame(root)
 left_frame.grid(row=0, column=0, sticky="nsew", padx=(10,5), pady=10)
 left_frame.grid_columnconfigure(0, weight=1)
-left_frame.grid_rowconfigure(2, weight=1)
+left_frame.grid_rowconfigure(2, weight=1)  # Buttons row doesn't grow
 
 tk.Label(left_frame, text="Enter SQL Query:", font=("Arial", 12, "bold")).grid(row=0, column=0, sticky="w", pady=(0,5))
 
@@ -146,30 +120,28 @@ query_text = scrolledtext.ScrolledText(left_frame, height=10, wrap=tk.WORD)
 query_text.grid(row=1, column=0, sticky="nsew", pady=(0,10))
 query_text.insert(tk.END, "SELECT TOP 20 * FROM flights")
 
+# Buttons
 btn_frame = tk.Frame(left_frame)
 btn_frame.grid(row=2, column=0, sticky="ew", pady=(0,10))
 tk.Button(btn_frame, text="Run Query", command=lambda: execute_query(query_text.get("1.0", tk.END), output_text), width=15).pack(side=tk.LEFT, padx=5)
 tk.Button(btn_frame, text="Clear", command=clear_all, width=15).pack(side=tk.LEFT, padx=5)
-tk.Button(btn_frame, text="Save as Snippet", command=save_current_as_snippet, width=18).pack(side=tk.LEFT, padx=5)
+tk.Button(btn_frame, text="Save as Snippet", command=save_current_as_snippet_gui, width=18).pack(side=tk.LEFT, padx=5)
 
 tk.Label(left_frame, text="Query Results:", font=("Arial", 12, "bold")).grid(row=3, column=0, sticky="w", pady=(10,5))
 
-# Container frame for text + scrollbars
+# Output with horizontal + vertical scrolling
 output_container = tk.Frame(left_frame)
 output_container.grid(row=4, column=0, sticky="nsew")
 output_container.grid_rowconfigure(0, weight=1)
 output_container.grid_columnconfigure(0, weight=1)
 
-# Text widget
 output_text = tk.Text(output_container, height=15, wrap="none", state=tk.DISABLED, font=("Consolas", 10))
 output_text.grid(row=0, column=0, sticky="nsew")
 
-# Vertical scrollbar
 v_scroll = tk.Scrollbar(output_container, orient="vertical", command=output_text.yview)
 v_scroll.grid(row=0, column=1, sticky="ns")
 output_text.configure(yscrollcommand=v_scroll.set)
 
-# Horizontal scrollbar
 h_scroll = tk.Scrollbar(output_container, orient="horizontal", command=output_text.xview)
 h_scroll.grid(row=1, column=0, sticky="ew")
 output_text.configure(xscrollcommand=h_scroll.set)
@@ -197,18 +169,18 @@ snippet_listbox.bind("<Double-Button-1>", load_selected_snippet)
 # Snippet buttons
 snippet_btn_frame = tk.Frame(right_frame)
 snippet_btn_frame.pack(pady=5)
-tk.Button(snippet_btn_frame, text="Add", command=add_snippet, width=8).pack(side=tk.LEFT, padx=3)
-tk.Button(snippet_btn_frame, text="Edit", command=edit_snippet, width=8).pack(side=tk.LEFT, padx=3)
-tk.Button(snippet_btn_frame, text="Delete", command=delete_snippet, width=8).pack(side=tk.LEFT, padx=3)
+tk.Button(snippet_btn_frame, text="Add", command=add_snippet_gui, width=8).pack(side=tk.LEFT, padx=3)
+tk.Button(snippet_btn_frame, text="Edit", command=edit_snippet_gui, width=8).pack(side=tk.LEFT, padx=3)
+tk.Button(snippet_btn_frame, text="Delete", command=delete_snippet_gui, width=8).pack(side=tk.LEFT, padx=3)
 
 # ------------------- Keyboard Shortcuts -------------------
 root.bind("<Control-Return>", lambda event: execute_query(query_text.get("1.0", tk.END), output_text))
-root.bind("<Control-s>", lambda event: save_current_as_snippet())
+root.bind("<Control-s>", lambda event: save_current_as_snippet_gui())
 root.bind("<Control-l>", lambda event: clear_all())
 query_text.focus_set()
 
-# Load snippets on startup
-current_snippets = load_snippets()
+# Startup
+load_snippets()  # Populates current_snippets in snippets.py
 refresh_snippet_list()
 
 root.mainloop()
