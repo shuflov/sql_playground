@@ -77,17 +77,26 @@ def delete_snippet_gui():
         refresh_snippet_list()
 
 def clear_all():
+    # Clear the text box
     query_text.delete("1.0", tk.END)
+    
+    # Delete all rows
     for item in output_tree.get_children():
         output_tree.delete(item)
+    
+    # Instead of deleting columns, just HIDE the headings text 
+    # This keeps the "structure" alive so the next query doesn't fail
+    for col in output_tree["columns"]:
+        output_tree.heading(col, text="")
+    
+    # This effectively makes the table look empty without "breaking" the widget
 
 # ------------------- Main GUI Setup -------------------
 
 root = tk.Tk()
 root.title("SQL Training Tool")
-root.geometry("1200x800")
-root.configure(bg="#f0f0f0") 
-
+root.state('zoomed') 
+root.configure(bg="#f0f0f0")
 # FIX: Changed 'windows' to 'alt' for maximum compatibility
 style = ttk.Style()
 style.theme_use("alt") 

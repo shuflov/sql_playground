@@ -1,9 +1,5 @@
 [
     {
-        "name": "select all ( data)",
-        "sql": "select*from data"
-    },
-    {
         "name": "select all (flights)",
         "sql": "select*from flights"
     },
@@ -30,5 +26,9 @@
     {
         "name": "get all flights P",
         "sql": "getallflights"
+    },
+    {
+        "name": "select all data",
+        "sql": "select * from data"
     }
 ]
