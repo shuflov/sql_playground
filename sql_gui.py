@@ -11,6 +11,19 @@ from snippets import (
     save_current_as_snippet
 )
 
+import ctypes
+
+# Fix for blurry text on Windows 10/11
+try:
+    ctypes.windll.shcore.SetProcessDpiAwareness(1)
+except Exception:
+    # This handles cases where the OS doesn't support it or 
+    # if you're on Mac/Linux (where it's usually sharp by default)
+    try:
+        ctypes.windll.user32.SetProcessDPIAware()
+    except Exception:
+        pass
+
 # ------------------- GUI Helper Functions -------------------
 def refresh_snippet_list():
     search_term = search_entry.get()
