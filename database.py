@@ -37,7 +37,7 @@ def execute_query(query, output_tree):
             for col in cols:
                 output_tree.heading(col, text=col)
                 # stretch=False prevents the Treeview from pushing the side panel
-                output_tree.column(col, anchor="w", width=150, stretch=False)
+                output_tree.column(col, anchor="center", width=150, stretch=False)
 
             # 3. Fetch and Insert Rows
             rows = cursor.fetchall()
