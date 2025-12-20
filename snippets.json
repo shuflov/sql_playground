@@ -1,0 +1,14 @@
+[
+    {
+        "name": "select all from data",
+        "sql": "select * from data"
+    },
+    {
+        "name": "select all from flights",
+        "sql": "select * from flights"
+    },
+    {
+        "name": "select all from average",
+        "sql": "select * from average"
+    }
+]
