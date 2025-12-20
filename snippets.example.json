@@ -1,0 +1,10 @@
+[
+  {
+    "name": "select all",
+    "sql": "SELECT * FROM your_table"
+  },
+  {
+    "name": "count rows",
+    "sql": "SELECT COUNT(*) FROM your_table"
+  }
+]
