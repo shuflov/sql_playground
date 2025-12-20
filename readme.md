@@ -15,23 +15,37 @@ A simple, offline SQL training application built with Python and Tkinter. Perfec
 - **Single File**: Everything is now contained in one easy-to-manage `sql_gui.py` file
 
 ## Project Structure
+
+```
 ├── sql_gui.py              # Complete application (GUI, database, snippets, export)
 ├── snippets.example.json   # Template/example snippets (copy to snippets.json if desired)
 ├── .gitignore              # Ignores private files like snippets.json
 └── README.md               # This file
-text## Requirements
+```
+
+## Requirements
 
 - Python 3.7+
 - Microsoft SQL Server (tested with SQL Server Express)
 - Required packages:
   ```bash
   pip install pyodbc pandas openpyxl
-Setup
-1. Install Dependencies
-Bashpip install pyodbc pandas openpyxl
-2. Configure Database Connection
-The connection string is near the top of sql_gui.py:
-PythonCONN_STR = (
+  ```
+
+## Setup
+
+### 1. Install Dependencies
+
+```bash
+pip install pyodbc pandas openpyxl
+```
+
+### 2. Configure Database Connection
+
+The connection string is near the top of `sql_gui.py`:
+
+```python
+CONN_STR = (
     "DRIVER={ODBC Driver 18 for SQL Server};"
     "SERVER=localhost\\SQLEXPRESS;"
     "DATABASE=test;"
@@ -39,83 +53,103 @@ PythonCONN_STR = (
     "Encrypt=yes;"
     "TrustServerCertificate=yes;"
 )
+```
+
 Adjust if needed:
 
-Different server → change SERVER=
-SQL login → replace Trusted_Connection=yes; with UID=username;PWD=password;
-Different database → change DATABASE=test;
+- Different server → change `SERVER=`
+- SQL login → replace `Trusted_Connection=yes;` with `UID=username;PWD=password;`
+- Different database → change `DATABASE=test;`
 
-3. Create Test Database (Recommended)
+### 3. Create Test Database (Recommended)
+
 In SSMS or any SQL client:
-SQLCREATE DATABASE test;
+
+```sql
+CREATE DATABASE test;
 GO
 USE test;
 GO
 -- Create your tables here
-4. Snippets Setup
-Your personal saved queries are stored in snippets.json.
-Important: snippets.json is private
+```
 
-This file is ignored by Git (via .gitignore) to keep your personal queries private.
-The app will automatically create an empty snippets.json the first time you save a snippet.
-A template file snippets.example.json is provided — you can copy/rename it to snippets.json if you want starter examples.
+### 4. Snippets Setup
 
-5. Run the Application
-Bashpython sql_gui.py
-Usage
-Writing and Executing Queries
+Your personal saved queries are stored in `snippets.json`.
 
-Type your SQL query in the top text area
-Click Run Query (or press Ctrl+Enter)
-View results in the formatted table below
-Use Clear to reset query and results
+**Important: `snippets.json` is private**
+
+- This file is ignored by Git (via `.gitignore`) to keep your personal queries private.
+- The app will automatically create an empty `snippets.json` the first time you save a snippet.
+- A template file `snippets.example.json` is provided — you can copy/rename it to `snippets.json` if you want starter examples.
+
+### 5. Run the Application
+
+```bash
+python sql_gui.py
+```
+
+## Usage
+
+### Writing and Executing Queries
+
+1. Type your SQL query in the top text area
+2. Click **Run Query** (or press `Ctrl+Enter`)
+3. View results in the formatted table below
+4. Use **Clear** to reset query and results
 
 Button layout (top row):
-text[ Run Query ] [ Clear ] [ Save as Snippet ]                                         [ Export Results ]
-Managing Snippets
+```
+[ Run Query ] [ Clear ] [ Save as Snippet ]                    [ Export Results ]
+```
 
-Save Current Query: Click Save as Snippet → enter a name (will ask to overwrite if exists)
-Use a Snippet: Click any snippet in the right panel to load it into the editor
-Search: Type in the search box above the snippet list to filter
-Add / Edit / Delete: Use the small buttons below the snippet list
+### Managing Snippets
 
-Exporting Results
+- **Save Current Query**: Click **Save as Snippet** → enter a name (will ask to overwrite if exists)
+- **Use a Snippet**: Click any snippet in the right panel to load it into the editor
+- **Search**: Type in the search box above the snippet list to filter
+- **Add / Edit / Delete**: Use the small buttons below the snippet list
 
-Run a query to populate the results table
-Click Export Results (button on the far right)
-A small dialog appears — choose CSV (default) or Excel
-Click Export and choose save location
-File is saved with headers and all rows preserved (suggested filename: query_results.csv or .xlsx)
+### Exporting Results
 
-Troubleshooting
-Connection Issues:
+1. Run a query to populate the results table
+2. Click **Export Results** (button on the far right)
+3. A small dialog appears — choose CSV (default) or Excel
+4. Click **Export** and choose save location
+5. File is saved with headers and all rows preserved (suggested filename: `query_results.csv` or `.xlsx`)
 
-Verify SQL Server is running
-Check server name (localhost\SQLEXPRESS for default Express)
-Ensure Windows Authentication or correct credentials
-Confirm database exists
+## Troubleshooting
 
-Driver Issues:
+### Connection Issues:
 
-Install ODBC Driver 18: Microsoft download page
+- Verify SQL Server is running
+- Check server name (`localhost\SQLEXPRESS` for default Express)
+- Ensure Windows Authentication or correct credentials
+- Confirm database exists
 
-Export Issues:
+### Driver Issues:
 
-Make sure you have results displayed first
-Install pandas and openpyxl if Excel export fails
+- Install ODBC Driver 18: [Microsoft download page](https://learn.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server)
 
-Version Control with Git
-Bashgit init
+### Export Issues:
+
+- Make sure you have results displayed first
+- Install `pandas` and `openpyxl` if Excel export fails
+
+## Version Control with Git
+
+```bash
+git init
 git add sql_gui.py README.md snippets.example.json .gitignore
 git commit -m "Initial commit"
-Important: snippets.json is already ignored — your personal queries stay private and local.
-License
+```
+
+**Important**: `snippets.json` is already ignored — your personal queries stay private and local.
+
+## License
+
 Free to use for personal and educational purposes.
 
-Enjoy practicing SQL! 🚀
-textThis README is fully updated for your **current single-file version** of the app.  
-Just replace the content of your `readme.md` (note: it's `readme.md`, not `readme.dm` 😊) with the text above.
+---
 
-You're all set — clean code, clean docs, private snippets, and a professional look! 
-
-Let me know what you'd like to add next (tooltips, dark mode, syntax highlighting, etc.). Happy coding!
+**Enjoy practicing SQL!** 🚀
