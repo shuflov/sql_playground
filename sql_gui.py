@@ -200,14 +200,18 @@ def schedule_highlight(event=None):
     query_text.after(200, highlight_sql)
 
 def change_database():
-    global conn_str, current_db
+    global conn_str, current_db, db_label  # Add db_label here
     new_db = simpledialog.askstring("Change Database", "Enter database name:", initialvalue=current_db)
     if new_db and new_db.strip():
         current_db = new_db.strip()
         conn_str = get_conn_str(current_db)
         root.title(f"SQL Training Tool - Database: {current_db}")
+        
+        # UPDATE THE LABEL
+        db_label.config(text=f"Database: {current_db}")
+        
         messagebox.showinfo("Database Changed", f"Now connected to: {current_db}")
-        clear_all()  # Clear results to avoid confusion
+        clear_all()  # Clear results
 
 # ------------------- Main GUI Setup -------------------
 
@@ -231,7 +235,15 @@ left_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
 left_frame.grid_columnconfigure(0, weight=1)
 left_frame.grid_rowconfigure(4, weight=1)
 
-tk.Label(left_frame, text=f"SQL Training Tool - Database: {current_db}", bg="#f0f0f0", font=("Arial", 10, "bold")).grid(row=0, column=0, sticky="w")
+# Title row with dynamic database info
+title_frame = tk.Frame(left_frame, bg="#f0f0f0")
+title_frame.grid(row=0, column=0, sticky="w")
+
+tk.Label(title_frame, text="SQL Query:", bg="#f0f0f0", font=("Arial", 10, "bold")).pack(side=tk.LEFT)
+
+# Dynamic database label — we'll update this later
+db_label = tk.Label(title_frame, text=f"Database: {current_db}", bg="#f0f0f0", font=("Arial", 10, "italic"), fg="#2c3e50")
+db_label.pack(side=tk.LEFT, padx=(20, 0))
 
 query_text = scrolledtext.ScrolledText(left_frame, height=10, font=("Consolas", 11),
                                       bg="white", fg="black", insertbackground="black", relief="sunken", bd=2)

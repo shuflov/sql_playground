@@ -36,7 +36,7 @@ def execute_query(query, results_notebook, conn_str):
                 tree.column("#0", width=0, stretch=False)
                 for col in cols:
                     tree.heading(col, text=col)
-                    tree.column(col, anchor="w", width=120)
+                    tree.column(col, anchor="center", width=120)
 
                 rows = cursor.fetchall()
                 if rows:
