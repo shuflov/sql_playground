@@ -9,38 +9,29 @@ A simple, offline SQL training application built with Python and Tkinter. Perfec
 - **Save Current Query as Snippet**: One-click save with overwrite protection
 - **Multiple Result Sets**: Run several SELECT statements at once — each table displays separately with headers
 - **Beautiful Table Formatting**: Aligned columns, clear separators, NULL handling
+- **Export Results**: Save query results to CSV or Excel with a friendly dialog (CSV selected by default)
 - **Fully Offline**: Everything runs locally — no cloud dependencies
 - **Persistent Snippets**: Saved automatically to `snippets.json` in the project folder
-- **Git Ready**: Easy to version-control your progress
+- **Single File**: Everything is now contained in one easy-to-manage `sql_gui.py` file
 
 ## Project Structure
-
-```
-├── sql_gui.py        # Main application file
-├── snippets.json     # Your saved SQL snippets (auto-generated, kept private)
-└── README.md         # This file
-```
-
-## Requirements
+├── sql_gui.py              # Complete application (GUI, database, snippets, export)
+├── snippets.example.json   # Template/example snippets (copy to snippets.json if desired)
+├── .gitignore              # Ignores private files like snippets.json
+└── README.md               # This file
+text## Requirements
 
 - Python 3.7+
-- Microsoft SQL Server (tested with SQL Server 2025 Express)
-- pyodbc: `pip install pyodbc`
-
-## Setup
-
-### 1. Install Dependencies
-
-```bash
-pip install pyodbc
-```
-
-### 2. Configure Database Connection
-
-Inside `sql_gui.py`, the connection string is configured around line 110-117:
-
-```python
-conn_str = (
+- Microsoft SQL Server (tested with SQL Server Express)
+- Required packages:
+  ```bash
+  pip install pyodbc pandas openpyxl
+Setup
+1. Install Dependencies
+Bashpip install pyodbc pandas openpyxl
+2. Configure Database Connection
+The connection string is near the top of sql_gui.py:
+PythonCONN_STR = (
     "DRIVER={ODBC Driver 18 for SQL Server};"
     "SERVER=localhost\\SQLEXPRESS;"
     "DATABASE=test;"
@@ -48,115 +39,83 @@ conn_str = (
     "Encrypt=yes;"
     "TrustServerCertificate=yes;"
 )
-```
+Adjust if needed:
 
-**Default settings:**
-- SQL Server Express named instance: `localhost\SQLEXPRESS`
-- Windows Authentication
-- Database: `test`
+Different server → change SERVER=
+SQL login → replace Trusted_Connection=yes; with UID=username;PWD=password;
+Different database → change DATABASE=test;
 
-**If you need different settings**, modify the connection string:
-- For SQL login: Replace `Trusted_Connection=yes;` with `UID=your_username;PWD=your_password;`
-- For different server: Change `SERVER=localhost\\SQLEXPRESS;`
-- For different database: Change `DATABASE=test;`
-
-### 3. Create Test Database (Recommended)
-
-Open SQL Server Management Studio (SSMS) or another SQL client and run:
-
-```sql
-CREATE DATABASE test;
+3. Create Test Database (Recommended)
+In SSMS or any SQL client:
+SQLCREATE DATABASE test;
 GO
 USE test;
-```
+GO
+-- Create your tables here
+4. Snippets Setup
+Your personal saved queries are stored in snippets.json.
+Important: snippets.json is private
 
-### 4. Create your own snippets and store them in snippet.json file
+This file is ignored by Git (via .gitignore) to keep your personal queries private.
+The app will automatically create an empty snippets.json the first time you save a snippet.
+A template file snippets.example.json is provided — you can copy/rename it to snippets.json if you want starter examples.
 
-### 5. Run the Application
+5. Run the Application
+Bashpython sql_gui.py
+Usage
+Writing and Executing Queries
 
-```bash
-python sql_gui.py
-```
+Type your SQL query in the top text area
+Click Run Query (or press Ctrl+Enter)
+View results in the formatted table below
+Use Clear to reset query and results
 
-## Usage
+Button layout (top row):
+text[ Run Query ] [ Clear ] [ Save as Snippet ]                                         [ Export Results ]
+Managing Snippets
 
-### Writing and Executing Queries
+Save Current Query: Click Save as Snippet → enter a name (will ask to overwrite if exists)
+Use a Snippet: Click any snippet in the right panel to load it into the editor
+Search: Type in the search box above the snippet list to filter
+Add / Edit / Delete: Use the small buttons below the snippet list
 
-1. Type your SQL query in the top text area
-2. Click **Run Query** to execute
-3. View results in the formatted table below
-4. Use **Clear** to reset both query and results
+Exporting Results
 
-### Managing Snippets
+Run a query to populate the results table
+Click Export Results (button on the far right)
+A small dialog appears — choose CSV (default) or Excel
+Click Export and choose save location
+File is saved with headers and all rows preserved (suggested filename: query_results.csv or .xlsx)
 
-**Save Current Query:**
-- Click **Save as Snippet** to save the current query
-- Enter a name when prompted
-- If the name exists, you'll be asked to confirm overwrite
+Troubleshooting
+Connection Issues:
 
-**Using Saved Snippets:**
-- All saved snippets appear in the right panel
-- Single-click a snippet to load it into the query area
-- Double-click also works
+Verify SQL Server is running
+Check server name (localhost\SQLEXPRESS for default Express)
+Ensure Windows Authentication or correct credentials
+Confirm database exists
 
-**Managing Snippets:**
-- **Add**: Create a new snippet from scratch
-- **Edit**: Modify an existing snippet's name or SQL
-- **Delete**: Remove a snippet permanently
+Driver Issues:
 
-### Snippet File
+Install ODBC Driver 18: Microsoft download page
 
-The `snippets.json` file stores your saved queries and is automatically created on first use. This file contains your personal SQL practice work and should be kept private (add to `.gitignore` if using version control).
+Export Issues:
 
+Make sure you have results displayed first
+Install pandas and openpyxl if Excel export fails
 
-## Troubleshooting
-
-**Connection Issues:**
-- Verify SQL Server is running
-- Check server name (use `localhost\SQLEXPRESS` for default Express installation)
-- Ensure Windows Authentication is enabled, or add SQL login credentials
-- Confirm the database exists
-
-**Driver Issues:**
-- Install ODBC Driver 18: Download from [Microsoft's website](https://learn.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server)
-- If driver is not found, check available drivers: `pyodbc.drivers()`
-
-**Snippets Not Saving:**
-- Ensure `snippets.json` is in the same directory as `sql_gui.py`
-- Check file permissions
-- The file is created automatically on first save
-
-## Contributing
-
-This is a personal training tool, but feel free to:
-- Fork and customize for your needs
-- Add new features
-- Share improvements
-
-## Version Control with Git
-
-To track your progress:
-
-```bash
-git init
-git add sql_gui.py README.md
+Version Control with Git
+Bashgit init
+git add sql_gui.py README.md snippets.example.json .gitignore
 git commit -m "Initial commit"
-```
-
-**Important:** Add `snippets.json` to `.gitignore` to keep your personal queries private:
-
-```bash
-echo "snippets.json" > .gitignore
-echo "__pycache__/" >> .gitignore
-echo "*.pyc" >> .gitignore
-git add .gitignore
-git commit -m "Add gitignore"
-```
-
-## License
-
+Important: snippets.json is already ignored — your personal queries stay private and local.
+License
 Free to use for personal and educational purposes.
 
-## Feedback & Support
+Enjoy practicing SQL! 🚀
+textThis README is fully updated for your **current single-file version** of the app.  
+Just replace the content of your `readme.md` (note: it's `readme.md`, not `readme.dm` 😊) with the text above.
 
-This is a learning tool. Experiment, break things, and learn from errors!
+You're all set — clean code, clean docs, private snippets, and a professional look! 
+
+Let me know what you'd like to add next (tooltips, dark mode, syntax highlighting, etc.). Happy coding!
