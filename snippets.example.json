@@ -1,10 +1,102 @@
 [
   {
-    "name": "select all",
-    "sql": "SELECT * FROM your_table"
+    "name": "SELECT all columns from table",
+    "sql": "SELECT *\nFROM table_name;"
   },
   {
-    "name": "count rows",
-    "sql": "SELECT COUNT(*) FROM your_table"
+    "name": "SELECT specific columns",
+    "sql": "SELECT column1, column2, column3\nFROM table_name;"
+  },
+  {
+    "name": "SELECT with WHERE filter",
+    "sql": "SELECT column1, column2\nFROM table_name\nWHERE column1 = 'value';"
+  },
+  {
+    "name": "SELECT with ORDER BY",
+    "sql": "SELECT column1, column2\nFROM table_name\nORDER BY column1 ASC;"
+  },
+  {
+    "name": "SELECT TOP/LIMIT rows",
+    "sql": "SELECT TOP 10 *\nFROM table_name\nORDER BY column1 DESC;"
+  },
+  {
+    "name": "SELECT DISTINCT",
+    "sql": "SELECT DISTINCT column1\nFROM table_name;"
+  },
+  {
+    "name": "INSERT single row",
+    "sql": "INSERT INTO table_name (column1, column2, column3)\nVALUES ('value1', 'value2', 123);"
+  },
+  {
+    "name": "INSERT multiple rows",
+    "sql": "INSERT INTO table_name (column1, column2)\nVALUES \n('value1', 'A'),\n('value2', 'B'),\n('value3', 'C');"
+  },
+  {
+    "name": "UPDATE row(s)",
+    "sql": "UPDATE table_name\nSET column1 = 'new_value', column2 = 999\nWHERE id = 5;"
+  },
+  {
+    "name": "DELETE row(s)",
+    "sql": "DELETE FROM table_name\nWHERE id = 10;"
+  },
+  {
+    "name": "CREATE new table",
+    "sql": "CREATE TABLE new_table_name (\n    id INT PRIMARY KEY IDENTITY(1,1),\n    column1 VARCHAR(100),\n    column2 INT,\n    column3 DATE\n);"
+  },
+  {
+    "name": "DROP table",
+    "sql": "DROP TABLE IF EXISTS table_name;"
+  },
+  {
+    "name": "RENAME table (sp_rename)",
+    "sql": "EXEC sp_rename 'old_table_name', 'new_table_name';"
+  },
+  {
+    "name": "ADD column to table",
+    "sql": "ALTER TABLE table_name\nADD new_column VARCHAR(50) NULL;"
+  },
+  {
+    "name": "DROP column from table",
+    "sql": "ALTER TABLE table_name\nDROP COLUMN column_to_remove;"
+  },
+  {
+    "name": "RENAME column (sp_rename)",
+    "sql": "EXEC sp_rename 'table_name.old_column_name', 'new_column_name', 'COLUMN';"
+  },
+  {
+    "name": "COUNT rows",
+    "sql": "SELECT COUNT(*) AS total_rows\nFROM table_name;"
+  },
+  {
+    "name": "GROUP BY with COUNT",
+    "sql": "SELECT column1, COUNT(*) AS count\nFROM table_name\nGROUP BY column1\nORDER BY count DESC;"
+  },
+  {
+    "name": "INNER JOIN two tables",
+    "sql": "SELECT t1.column1, t2.column2\nFROM table1 t1\nINNER JOIN table2 t2 ON t1.id = t2.table1_id;"
+  },
+  {
+    "name": "LEFT JOIN",
+    "sql": "SELECT t1.column1, t2.column2\nFROM table1 t1\nLEFT JOIN table2 t2 ON t1.id = t2.table1_id;"
+  },
+  {
+    "name": "LIKE search",
+    "sql": "SELECT *\nFROM table_name\nWHERE column1 LIKE '%search_text%';"
+  },
+  {
+    "name": "BETWEEN dates/numbers",
+    "sql": "SELECT *\nFROM table_name\nWHERE date_column BETWEEN '2025-01-01' AND '2025-12-31';"
+  },
+  {
+    "name": "CREATE simple stored procedure",
+    "sql": "CREATE PROCEDURE proc_name\nAS\nBEGIN\n    SELECT * FROM table_name;\nEND;"
+  },
+  {
+    "name": "EXECUTE stored procedure",
+    "sql": "EXEC proc_name;"
+  },
+  {
+    "name": "TRUNCATE table (delete all rows)",
+    "sql": "TRUNCATE TABLE table_name;"
   }
 ]
