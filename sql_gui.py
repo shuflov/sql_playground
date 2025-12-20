@@ -10,9 +10,10 @@ from snippets import (
     add_snippet,
     edit_snippet,
     delete_snippet,
-    save_current_as_snippet
+    save_current_as_snippet,
+    move_snippet_up,      # ← NEW: for reordering
+    move_snippet_down     # ← NEW: for reordering
 )
-
 from export import export_results
 
 # 1. HIGH-DPI AWARENESS
@@ -25,10 +26,27 @@ except Exception:
 # ------------------- GUI Helper Functions -------------------
 
 def refresh_snippet_list():
-    filtered = get_filtered_snippets(search_entry.get())
+    search_term = search_entry.get()
+    filtered = get_filtered_snippets(search_term)
+    
+    # Remember current selection (by name) to restore it after refresh
+    selected_name = None
+    selection = snippet_listbox.curselection()
+    if selection:
+        selected_name = snippet_listbox.get(selection[0])
+    
+    # Clear and repopulate
     snippet_listbox.delete(0, tk.END)
     for s in filtered:
         snippet_listbox.insert(tk.END, s["name"])
+    
+    # Restore selection if possible
+    if selected_name:
+        for i, s in enumerate(filtered):
+            if s["name"] == selected_name:
+                snippet_listbox.selection_set(i)
+                snippet_listbox.see(i)
+                break
 
 def run_current_query(event=None):
     sql_to_run = query_text.get("1.0", tk.END).strip()
@@ -78,32 +96,60 @@ def delete_snippet_gui():
         delete_snippet(name)
         refresh_snippet_list()
 
-def clear_all():
-    # Clear the text box
-    query_text.delete("1.0", tk.END)
+# NEW: GUI wrappers for moving snippets up/down
+def move_snippet_up_gui():
+    selection = snippet_listbox.curselection()
+    if not selection or selection[0] == 0:
+        return
+    displayed_idx = selection[0]
+    name = snippet_listbox.get(displayed_idx)
     
-    # Delete all rows
+    # Find real index and move
+    for i, s in enumerate(get_filtered_snippets("")):  # full list
+        if s["name"] == name:
+            if move_snippet_up(i) is not None:  # success
+                refresh_snippet_list()
+                new_idx = displayed_idx - 1
+                if new_idx >= 0:
+                    snippet_listbox.selection_set(new_idx)
+                    snippet_listbox.see(new_idx)
+            break
+
+def move_snippet_down_gui():
+    selection = snippet_listbox.curselection()
+    if not selection:
+        return
+    displayed_idx = selection[0]
+    if displayed_idx >= snippet_listbox.size() - 1:
+        return
+    name = snippet_listbox.get(displayed_idx)
+    
+    for i, s in enumerate(get_filtered_snippets("")):
+        if s["name"] == name:
+            if move_snippet_down(i) is not None:
+                refresh_snippet_list()
+                new_idx = displayed_idx + 1
+                if new_idx < snippet_listbox.size():
+                    snippet_listbox.selection_set(new_idx)
+                    snippet_listbox.see(new_idx)
+            break
+
+def clear_all():
+    query_text.delete("1.0", tk.END)
     for item in output_tree.get_children():
         output_tree.delete(item)
-    
-    # Instead of deleting columns, just HIDE the headings text 
-    # This keeps the "structure" alive so the next query doesn't fail
     for col in output_tree["columns"]:
         output_tree.heading(col, text="")
-
-
-
-    # This effectively makes the table look empty without "breaking" the widget
 
 # ------------------- Main GUI Setup -------------------
 
 root = tk.Tk()
 root.title("SQL Training Tool")
-root.state('zoomed') 
+root.state('zoomed')
 root.configure(bg="#f0f0f0")
-# FIX: Changed 'windows' to 'alt' for maximum compatibility
+
 style = ttk.Style()
-style.theme_use("alt") 
+style.theme_use("alt")
 style.configure("Treeview", rowheight=25, font=("Segoe UI", 9))
 style.configure("Treeview.Heading", background="#e1e1e1", font=("Segoe UI", 9, "bold"))
 
@@ -119,16 +165,15 @@ left_frame.grid_rowconfigure(4, weight=1)
 
 tk.Label(left_frame, text="SQL Query:", bg="#f0f0f0", font=("Arial", 10, "bold")).grid(row=0, column=0, sticky="w")
 
-query_text = scrolledtext.ScrolledText(left_frame, height=10, font=("Consolas", 11), 
+query_text = scrolledtext.ScrolledText(left_frame, height=10, font=("Consolas", 11),
                                       bg="white", fg="black", insertbackground="black", relief="sunken", bd=2)
 query_text.grid(row=1, column=0, sticky="nsew", pady=(5,10))
 
-# Main Buttons - with Export on the far right
+# Main Buttons - Export on the far right
 btn_frame = tk.Frame(left_frame, bg="#f0f0f0")
-btn_frame.grid(row=2, column=0, sticky="ew")  # Make it stretch horizontally
-btn_frame.grid_columnconfigure(0, weight=1)   # Allows right alignment
+btn_frame.grid(row=2, column=0, sticky="ew")
+btn_frame.grid_columnconfigure(0, weight=1)
 
-# Left side: group the first three buttons
 left_btn_frame = tk.Frame(btn_frame, bg="#f0f0f0")
 left_btn_frame.grid(row=0, column=0, sticky="w")
 
@@ -136,10 +181,9 @@ tk.Button(left_btn_frame, text="Run Query", command=run_current_query, width=12)
 tk.Button(left_btn_frame, text="Clear", command=clear_all, width=12).pack(side=tk.LEFT, padx=2)
 tk.Button(left_btn_frame, text="Save as Snippet", command=save_new_snippet_gui, width=15).pack(side=tk.LEFT, padx=2)
 
-# Right side: Export button
 tk.Button(btn_frame, text="Export Results", command=lambda: export_results(output_tree), width=15).grid(row=0, column=1, sticky="e", padx=(0, 10))
 
-# Results
+# Results table
 tree_container = tk.Frame(left_frame)
 tree_container.grid(row=4, column=0, sticky="nsew", pady=(10,0))
 tree_container.grid_rowconfigure(0, weight=1)
@@ -147,16 +191,18 @@ tree_container.grid_columnconfigure(0, weight=1)
 
 v_scroll = tk.Scrollbar(tree_container)
 h_scroll = tk.Scrollbar(tree_container, orient="horizontal")
-output_tree = ttk.Treeview(tree_container, show="headings", 
+output_tree = ttk.Treeview(tree_container, show="headings",
                           yscrollcommand=v_scroll.set, xscrollcommand=h_scroll.set)
 
 output_tree.grid(row=0, column=0, sticky="nsew")
-v_scroll.grid(row=0, column=1, sticky="ns"); v_scroll.config(command=output_tree.yview)
-h_scroll.grid(row=1, column=0, sticky="ew"); h_scroll.config(command=output_tree.xview)
+v_scroll.grid(row=0, column=1, sticky="ns")
+v_scroll.config(command=output_tree.yview)
+h_scroll.grid(row=1, column=0, sticky="ew")
+h_scroll.config(command=output_tree.xview)
 
-# --- RIGHT SIDE (Locked at 300px) ---
+# --- RIGHT SIDE (Snippets) ---
 right_frame = tk.Frame(root, width=300, bg="#e1e1e1", relief="sunken", bd=1)
-right_frame.grid_propagate(False) 
+right_frame.grid_propagate(False)
 right_frame.grid(row=0, column=1, sticky="nsew", padx=(5,10), pady=10)
 
 tk.Label(right_frame, text="Snippets", bg="#e1e1e1", font=("Arial", 11, "bold")).pack(pady=10)
@@ -168,6 +214,7 @@ search_entry.bind("<KeyRelease>", lambda e: refresh_snippet_list())
 snippet_listbox = tk.Listbox(right_frame, exportselection=False, font=("Arial", 10))
 snippet_listbox.pack(fill="both", expand=True, padx=10, pady=5)
 snippet_listbox.bind("<<ListboxSelect>>", load_selected_snippet)
+snippet_listbox.focus_set()  # Enables smooth arrow key navigation
 
 s_btn_frame = tk.Frame(right_frame, bg="#e1e1e1")
 s_btn_frame.pack(fill="x", pady=10)
@@ -175,6 +222,10 @@ s_btn_frame.pack(fill="x", pady=10)
 tk.Button(s_btn_frame, text="Add", width=7, command=lambda: [add_snippet(simpledialog.askstring("Add", "Name:"), ""), refresh_snippet_list()]).pack(side=tk.LEFT, padx=5)
 tk.Button(s_btn_frame, text="Edit", width=7, command=edit_snippet_gui).pack(side=tk.LEFT, padx=2)
 tk.Button(s_btn_frame, text="Del", width=7, command=delete_snippet_gui).pack(side=tk.LEFT, padx=2)
+
+# Reorder buttons - now working!
+tk.Button(s_btn_frame, text="↑ Up", width=6, command=move_snippet_up_gui).pack(side=tk.LEFT, padx=8)
+tk.Button(s_btn_frame, text="↓ Down", width=6, command=move_snippet_down_gui).pack(side=tk.LEFT, padx=2)
 
 # --- START ---
 load_snippets()

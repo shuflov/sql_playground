@@ -61,3 +61,17 @@ def save_current_as_snippet(name, current_sql):
     current_snippets.append({"name": name, "sql": current_sql})
     save_snippets()
     return True
+
+def move_snippet_up(index):
+    if index <= 0 or index >= len(current_snippets):
+        return None
+    current_snippets[index], current_snippets[index - 1] = current_snippets[index - 1], current_snippets[index]
+    save_snippets()
+    return index - 1
+
+def move_snippet_down(index):
+    if index < 0 or index >= len(current_snippets) - 1:
+        return None
+    current_snippets[index], current_snippets[index + 1] = current_snippets[index + 1], current_snippets[index]
+    save_snippets()
+    return index + 1
