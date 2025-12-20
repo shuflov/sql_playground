@@ -13,6 +13,8 @@ from snippets import (
     save_current_as_snippet
 )
 
+from export import export_results
+
 # 1. HIGH-DPI AWARENESS
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
@@ -88,7 +90,9 @@ def clear_all():
     # This keeps the "structure" alive so the next query doesn't fail
     for col in output_tree["columns"]:
         output_tree.heading(col, text="")
-    
+
+
+
     # This effectively makes the table look empty without "breaking" the widget
 
 # ------------------- Main GUI Setup -------------------
@@ -119,13 +123,21 @@ query_text = scrolledtext.ScrolledText(left_frame, height=10, font=("Consolas", 
                                       bg="white", fg="black", insertbackground="black", relief="sunken", bd=2)
 query_text.grid(row=1, column=0, sticky="nsew", pady=(5,10))
 
-# Main Buttons
+# Main Buttons - with Export on the far right
 btn_frame = tk.Frame(left_frame, bg="#f0f0f0")
-btn_frame.grid(row=2, column=0, sticky="w")
+btn_frame.grid(row=2, column=0, sticky="ew")  # Make it stretch horizontally
+btn_frame.grid_columnconfigure(0, weight=1)   # Allows right alignment
 
-tk.Button(btn_frame, text="Run Query", command=run_current_query, width=12).pack(side=tk.LEFT, padx=2)
-tk.Button(btn_frame, text="Clear", command=clear_all, width=12).pack(side=tk.LEFT, padx=2)
-tk.Button(btn_frame, text="Save as Snippet", command=save_new_snippet_gui, width=15).pack(side=tk.LEFT, padx=2)
+# Left side: group the first three buttons
+left_btn_frame = tk.Frame(btn_frame, bg="#f0f0f0")
+left_btn_frame.grid(row=0, column=0, sticky="w")
+
+tk.Button(left_btn_frame, text="Run Query", command=run_current_query, width=12).pack(side=tk.LEFT, padx=2)
+tk.Button(left_btn_frame, text="Clear", command=clear_all, width=12).pack(side=tk.LEFT, padx=2)
+tk.Button(left_btn_frame, text="Save as Snippet", command=save_new_snippet_gui, width=15).pack(side=tk.LEFT, padx=2)
+
+# Right side: Export button
+tk.Button(btn_frame, text="Export Results", command=lambda: export_results(output_tree), width=15).grid(row=0, column=1, sticky="e", padx=(0, 10))
 
 # Results
 tree_container = tk.Frame(left_frame)
