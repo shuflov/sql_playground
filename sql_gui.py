@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import scrolledtext, messagebox, simpledialog, ttk
 import ctypes
+import re
 
 # Import your custom modules
 from database import execute_query
@@ -24,6 +25,34 @@ except Exception:
     except Exception: pass
 
 # ------------------- GUI Helper Functions -------------------
+
+def highlight_sql(event=None):
+    # Remove old highlights
+    for tag in ["keyword", "string", "comment"]:
+        query_text.tag_remove(tag, "1.0", tk.END)
+    
+    content = query_text.get("1.0", tk.END)
+    
+    # Keywords (case-insensitive)
+    keywords = r"\b(SELECT|FROM|WHERE|AND|OR|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|DROP|ALTER|JOIN|INNER|LEFT|RIGHT|ON|GROUP BY|ORDER BY|HAVING|AS|DISTINCT|COUNT|SUM|AVG|MIN|MAX|NULL|IS|NOT|LIKE|BETWEEN|IN|EXISTS|ALL|ANY|UNION|CASE|WHEN|THEN|ELSE|END)\b"
+    for match in re.finditer(keywords, content, re.IGNORECASE):
+        start = query_text.index(f"1.0 + {match.start()} chars")
+        end = query_text.index(f"1.0 + {match.end()} chars")
+        query_text.tag_add("keyword", start, end)
+    
+    # Strings (single or double quoted)
+    strings = r"('([^'\\]|\\.)*'|\"([^\"\\]|\\.)*\")"
+    for match in re.finditer(strings, content):
+        start = query_text.index(f"1.0 + {match.start()} chars")
+        end = query_text.index(f"1.0 + {match.end()} chars")
+        query_text.tag_add("string", start, end)
+    
+    # Comments (-- until end of line)
+    comments = r"--.*$"
+    for match in re.finditer(comments, content, re.MULTILINE):
+        start = query_text.index(f"1.0 + {match.start()} chars")
+        end = query_text.index(f"1.0 + {match.end()} chars")
+        query_text.tag_add("comment", start, end)
 
 def refresh_snippet_list():
     search_term = search_entry.get()
@@ -64,6 +93,7 @@ def load_selected_snippet(event=None):
             query_text.delete("1.0", tk.END)
             query_text.insert("1.0", s["sql"])
             query_text.focus_set()
+            highlight_sql()
             break
 
 def save_new_snippet_gui():
@@ -167,7 +197,18 @@ tk.Label(left_frame, text="SQL Query:", bg="#f0f0f0", font=("Arial", 10, "bold")
 
 query_text = scrolledtext.ScrolledText(left_frame, height=10, font=("Consolas", 11),
                                       bg="white", fg="black", insertbackground="black", relief="sunken", bd=2)
+# Syntax highlighting tags
+query_text.tag_configure("keyword", foreground="#0000FF", font=("Consolas", 11, "bold"))
+query_text.tag_configure("string", foreground="#008000")
+query_text.tag_configure("comment", foreground="#808080")
 query_text.grid(row=1, column=0, sticky="nsew", pady=(5,10))
+
+# Real-time highlighting with small delay
+def schedule_highlight(event=None):
+    query_text.after_cancel("highlight")  # Cancel previous
+    query_text.after(200, highlight_sql)  # Run after 200ms idle
+
+query_text.bind("<KeyRelease>", schedule_highlight)
 
 # Main Buttons - Export on the far right
 btn_frame = tk.Frame(left_frame, bg="#f0f0f0")
