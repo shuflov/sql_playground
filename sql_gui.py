@@ -106,7 +106,7 @@ def run_current_query(event=None):
     execute_query(query, results_notebook, conn_str)
     # Select the first result tab (not History)
     if results_notebook.index("end") > 0:
-        results_notebook.select(0)
+        results_notebook.select(1)
 
 def get_current_treeview():
     """Return the Treeview widget from the currently selected tab, or None."""
