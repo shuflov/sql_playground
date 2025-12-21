@@ -506,7 +506,7 @@ btn_frame.grid_columnconfigure(0, weight=1)  # Allows right-side buttons to alig
 left_btn_frame = tk.Frame(btn_frame, bg="#f0f0f0")
 left_btn_frame.grid(row=0, column=0, sticky="w")
 
-tk.Button(left_btn_frame, text="Run Query", command=run_current_query, width=12).pack(side=tk.LEFT, padx=2)
+tk.Button(left_btn_frame, text="Run Query", command=run_current_query, bg="#c0f405", width=15).pack(side=tk.LEFT, padx=2)
 tk.Button(left_btn_frame, text="Clear", command=clear_all, width=12).pack(side=tk.LEFT, padx=2)
 tk.Button(left_btn_frame, text="Save as Snippet", command=save_new_snippet_gui, width=15).pack(side=tk.LEFT, padx=2)
 
@@ -514,9 +514,7 @@ tk.Button(left_btn_frame, text="Save as Snippet", command=save_new_snippet_gui, 
 right_btn_frame = tk.Frame(btn_frame, bg="#f0f0f0")
 right_btn_frame.grid(row=0, column=1, sticky="e", padx=(0, 10))
 
-# Change DB button — blue
-tk.Button(right_btn_frame, text="Change DB", command=change_database, width=12,
-          bg="#4a90e2", fg="white", relief="raised").pack(side=tk.LEFT, padx=(0, 8))
+
 
 # Copy Results button — neutral
 tk.Button(
@@ -639,7 +637,10 @@ snippet_listbox.bind("<B1-Motion>", on_snippet_drag_motion)  # Drag with left bu
 s_btn_frame = tk.Frame(right_frame, bg="#e1e1e1")
 s_btn_frame.pack(fill="x", pady=10)
 
-tk.Button(s_btn_frame, text="Page Development", bg="#10d931").pack(side=tk.LEFT, padx=5)
+#tk.Button(s_btn_frame, text="Page Development", bg="#10d931").pack(side=tk.LEFT, padx=5)
+# Change DB button — blue
+tk.Button(s_btn_frame, text="Change DB", command=change_database, width=12,
+          bg="#4a90e2", fg="white", relief="raised").pack(side=tk.LEFT, padx=(0, 8))
 # --tk.Button(s_btn_frame, text="Edit", width=7, command=edit_snippet_gui).pack(side=tk.LEFT, padx=2)
 # --tk.Button(s_btn_frame, text="Del", width=7, command=delete_snippet_gui).pack(side=tk.LEFT, padx=2)
 # --tk.Button(s_btn_frame, text="↑ Up", width=6, command=move_snippet_up_gui).pack(side=tk.LEFT, padx=8)
