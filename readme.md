@@ -108,7 +108,8 @@ Button layout (top row):
 - **Save Current Query**: Click **Save as Snippet** → enter a name (will ask to overwrite if exists)
 - **Use a Snippet**: Click any snippet in the right panel to load it into the editor
 - **Search**: Type in the search box above the snippet list to filter
-- **Add / Edit / Delete**: Use the small buttons below the snippet list
+- **Edit / Delete**: Just use right click of your mouse
+- **Change the order of snippets**: Just use your mouse, drag and drop
 
 ### Exporting Results
 
