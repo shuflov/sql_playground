@@ -12,4 +12,4 @@ page development button with modal window - proper to_do_list and brainstorming 
 edit modal too small for any changes
 code in main py (which has strange name) is too big
 update readme.md with new feature - history
-export results stoped working
+export results stoped working - done

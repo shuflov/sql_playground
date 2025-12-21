@@ -114,9 +114,19 @@ def get_current_treeview():
     if not current_tab:
         return None
     tab_frame = results_notebook.nametowidget(current_tab)
+    
+    # First, check direct children
     for child in tab_frame.winfo_children():
         if isinstance(child, ttk.Treeview):
             return child
+    
+    # If not found, check one level deeper (inside container frame)
+    for child in tab_frame.winfo_children():
+        if isinstance(child, tk.Frame) or isinstance(child, ttk.Frame):
+            for grandchild in child.winfo_children():
+                if isinstance(grandchild, ttk.Treeview):
+                    return grandchild
+    
     return None
 
 # ------------------- History Functions -------------------
@@ -284,6 +294,7 @@ def clear_all():
         tab_name = results_notebook.tab(tab_index, "text")
         if tab_name != "History":
             tab.destroy()
+
     # Add empty placeholder tab
     empty_tab = ttk.Frame(results_notebook)
     results_notebook.add(empty_tab, text="Results")
