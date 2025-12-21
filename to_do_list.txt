@@ -10,3 +10,4 @@ result table copy button - done
 history of run query
 page development button with modal window - proper to_do_list and brainstorming part of it
 edit modal too small for any changes
+code in main py (which has strange name) is too big
