@@ -11,5 +11,5 @@ history of run query - done
 page development button with modal window - proper to_do_list and brainstorming part of it
 edit modal too small for any changes
 code in main py (which has strange name) is too big
-update readme.md with new feature - history
+update readme.md with new feature - history - done
 export results stoped working - done

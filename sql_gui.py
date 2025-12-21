@@ -480,43 +480,46 @@ style.theme_use("alt")
 style.configure("Treeview", rowheight=25, font=("Segoe UI", 9))
 style.configure("Treeview.Heading", background="#e1e1e1", font=("Segoe UI", 9, "bold"))
 
-root.grid_columnconfigure(0, weight=1)
-root.grid_columnconfigure(1, weight=0)
+root.grid_columnconfigure(0, weight=1)  # Left (main) expands
+root.grid_columnconfigure(1, weight=0)  # Right (snippets) fixed width
 root.grid_rowconfigure(0, weight=1)
 
-# --- LEFT SIDE ---
-left_frame = tk.Frame(root, bg="#f0f0f0")
-left_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
-left_frame.grid_columnconfigure(0, weight=1)
-left_frame.grid_rowconfigure(4, weight=1)
+# --- LEFT SIDE: Use PanedWindow for resizable split ---
+left_pane = ttk.PanedWindow(root, orient=tk.VERTICAL)
+left_pane.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
 
-# Title row with dynamic database info
-title_frame = tk.Frame(left_frame, bg="#f0f0f0")
-title_frame.grid(row=0, column=0, sticky="w")
+# Top pane: Query editor + buttons
+top_frame = tk.Frame(left_pane, bg="#f0f0f0")
+left_pane.add(top_frame, weight=1)  # weight allows it to shrink/grow
+
+top_frame.grid_columnconfigure(0, weight=1)
+top_frame.grid_rowconfigure(1, weight=1)  # Query text expands
+
+# Title row with database info
+title_frame = tk.Frame(top_frame, bg="#f0f0f0")
+title_frame.grid(row=0, column=0, sticky="w", pady=(0, 5))
 
 tk.Label(title_frame, text="SQL Query:", bg="#f0f0f0", font=("Arial", 10, "bold")).pack(side=tk.LEFT)
-
-# Dynamic database label — we'll update this later
 db_label = tk.Label(title_frame, text=f"Database: {current_db}", bg="#f0f0f0", font=("Arial", 10, "italic"), fg="#2c3e50")
 db_label.pack(side=tk.LEFT, padx=(20, 0))
 
-query_text = scrolledtext.ScrolledText(left_frame, height=10, font=("Consolas", 11),
+# Query editor
+query_text = scrolledtext.ScrolledText(top_frame, height=10, font=("Consolas", 11),
                                       bg="white", fg="black", insertbackground="black", relief="sunken", bd=2)
-query_text.grid(row=1, column=0, sticky="nsew", pady=(5,10))
+query_text.grid(row=1, column=0, sticky="nsew", pady=(0,10))
 
-# Syntax highlighting setup
+# Syntax highlighting setup (same as before)
 query_text.tag_configure("keyword", foreground="#0000FF", font=("Consolas", 11, "bold"))
 query_text.tag_configure("string", foreground="#008000")
 query_text.tag_configure("comment", foreground="#808080")
 query_text.bind("<KeyRelease>", schedule_highlight)
 query_text.bind("<FocusIn>", schedule_highlight)
 
-# Main Buttons row
-btn_frame = tk.Frame(left_frame, bg="#f0f0f0")
-btn_frame.grid(row=2, column=0, sticky="ew")
-btn_frame.grid_columnconfigure(0, weight=1)  # Allows right-side buttons to align properly
+# Buttons row
+btn_frame = tk.Frame(top_frame, bg="#f0f0f0")
+btn_frame.grid(row=2, column=0, sticky="ew", pady=(0,10))
+btn_frame.grid_columnconfigure(0, weight=1)
 
-# Left side: Run, Clear, Save as Snippet
 left_btn_frame = tk.Frame(btn_frame, bg="#f0f0f0")
 left_btn_frame.grid(row=0, column=0, sticky="w")
 
@@ -524,37 +527,18 @@ tk.Button(left_btn_frame, text="Run Query", command=run_current_query, bg="#c0f4
 tk.Button(left_btn_frame, text="Clear", command=clear_all, width=12).pack(side=tk.LEFT, padx=2)
 tk.Button(left_btn_frame, text="Save as Snippet", command=save_new_snippet_gui, width=15).pack(side=tk.LEFT, padx=2)
 
-# Right side: Change DB and Export Results — side by side
 right_btn_frame = tk.Frame(btn_frame, bg="#f0f0f0")
-right_btn_frame.grid(row=0, column=1, sticky="e", padx=(0, 10))
+right_btn_frame.grid(row=0, column=1, sticky="e")
 
+tk.Button(right_btn_frame, text="Copy Results", command=lambda: copy_treeview_to_clipboard(get_current_treeview()),
+          width=14, bg="#bdc3c7").pack(side=tk.LEFT, padx=(0, 8))
 
+tk.Button(right_btn_frame, text="Export Results", command=lambda: export_results(get_current_treeview()),
+          width=15, bg="#2ecc71", fg="white").pack(side=tk.LEFT)
 
-# Copy Results button — neutral
-tk.Button(
-    right_btn_frame,
-    text="Copy Results",
-    command=lambda: copy_treeview_to_clipboard(get_current_treeview()),
-    width=14,
-    bg="#bdc3c7",
-    relief="raised"
-).pack(side=tk.LEFT, padx=(0, 8))
-
-# Export Results button — green
-tk.Button(
-    right_btn_frame,
-    text="Export Results",
-    command=lambda: export_results(get_current_treeview()),
-    width=15,
-    bg="#2ecc71",
-    fg="white",
-    relief="raised"
-).pack(side=tk.LEFT)
-
-
-# --- RESULTS: Multi-tab Notebook ---
-results_notebook = ttk.Notebook(left_frame)
-results_notebook.grid(row=4, column=0, sticky="nsew", pady=(10,0))
+# Bottom pane: Results notebook
+results_notebook = ttk.Notebook(left_pane)
+left_pane.add(results_notebook, weight=3)  # Give more initial space to results (3:1 ratio)
 
 # Initial empty tab
 empty_tab = ttk.Frame(results_notebook)
