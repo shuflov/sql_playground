@@ -1,9 +1,11 @@
+import pyodbc
 import tkinter as tk
 from tkinter import scrolledtext, messagebox, simpledialog, ttk
 import ctypes
 import re  # for syntax highlighting
 
 # Import your custom modules
+from history import load_history, add_history_entry, clear_history, delete_history_entry, get_history
 from database import execute_query
 from snippets import (
     load_snippets,
@@ -63,12 +65,48 @@ def get_conn_str(db_name):
 
 conn_str = get_conn_str(current_db)
 
+
 def run_current_query(event=None):
-    sql_to_run = query_text.get("1.0", tk.END).strip()
-    if not sql_to_run:
-        messagebox.showwarning("Warning", "The query box is empty!")
+    query = query_text.get("1.0", "end-1c").strip()
+    if not query:
+        messagebox.showwarning("Empty Query", "Please enter a query.")
         return
-    execute_query(sql_to_run, results_notebook, conn_str)
+    
+    # Track for history before execution
+    try:
+        # Try to execute and capture what happens
+        conn = pyodbc.connect(conn_str)
+        cursor = conn.cursor()
+        cursor.execute(query)
+        
+        # Determine result type for history
+        if cursor.description is None:
+            # Non-SELECT query
+            rows_affected = cursor.rowcount if cursor.rowcount >= 0 else 0
+            result_info = f"{rows_affected} row(s) affected"
+            conn.commit()
+        else:
+            # SELECT query
+            rows = cursor.fetchall()
+            result_info = f"{len(rows)} rows"
+        
+        cursor.close()
+        conn.close()
+        
+        # Success - add to history
+        add_history_entry(query, "success", result_info)
+        refresh_history_list()
+        
+    except Exception as e:
+        # Error - add to history
+        add_history_entry(query, "error", str(e)[:100])
+        refresh_history_list()
+    
+    # Now use the original execute_query to display results
+    execute_query(query, results_notebook, conn_str)
+    # Select the first result tab (not History)
+    if results_notebook.index("end") > 0:
+        results_notebook.select(0)
 
 def get_current_treeview():
     """Return the Treeview widget from the currently selected tab, or None."""
@@ -80,6 +118,82 @@ def get_current_treeview():
         if isinstance(child, ttk.Treeview):
             return child
     return None
+
+# ------------------- History Functions -------------------
+
+def refresh_history_list():
+    """Refresh the history treeview"""
+    if 'history_tree' not in globals():
+        return
+    
+    # Clear existing items
+    for item in history_tree.get_children():
+        history_tree.delete(item)
+    
+    # Add all history entries
+    history_entries = get_history()
+    for i, entry in enumerate(history_entries):
+        # Truncate query for display
+        query_preview = entry['query'][:60] + "..." if len(entry['query']) > 60 else entry['query']
+        query_preview = query_preview.replace('\n', ' ')  # Remove newlines
+        
+        # Color code by result type
+        tags = ('success',) if entry['result_type'] == 'success' else ('error',)
+        
+        history_tree.insert("", "end", values=(
+            entry['timestamp'],
+            query_preview,
+            entry['result_info']
+        ), tags=tags)
+
+def on_history_double_click(event):
+    """Load query from history into query box"""
+    selected = history_tree.selection()
+    if not selected:
+        return
+    
+    index = history_tree.index(selected[0])
+    history_entries = get_history()
+    
+    if 0 <= index < len(history_entries):
+        query = history_entries[index]['query']
+        query_text.delete("1.0", tk.END)
+        query_text.insert("1.0", query)
+        highlight_sql()
+        query_text.focus_set()
+
+def show_history_context_menu(event):
+    """Show right-click menu on history item"""
+    # Select the item under cursor
+    item = history_tree.identify_row(event.y)
+    if item:
+        history_tree.selection_set(item)
+        
+        # Create context menu
+        context_menu = tk.Menu(root, tearoff=0)
+        context_menu.add_command(label="Load Query", command=lambda: on_history_double_click(None))
+        context_menu.add_command(label="Delete Entry", command=delete_history_entry_gui)
+        context_menu.add_separator()
+        context_menu.add_command(label="Clear All History", command=clear_history_gui)
+        
+        # Show menu at cursor position
+        context_menu.post(event.x_root, event.y_root)
+
+def delete_history_entry_gui():
+    """Delete selected history entry"""
+    selected = history_tree.selection()
+    if not selected:
+        return
+    
+    index = history_tree.index(selected[0])
+    if delete_history_entry(index):
+        refresh_history_list()
+
+def clear_history_gui():
+    """Clear all history with confirmation"""
+    if messagebox.askyesno("Clear History", "Clear all query history?"):
+        clear_history()
+        refresh_history_list()
 
 def load_selected_snippet(event=None):
     selection = snippet_listbox.curselection()
@@ -436,6 +550,48 @@ results_notebook.add(empty_tab, text="Results")
 empty_tree = ttk.Treeview(empty_tab)
 empty_tree.pack(fill="both", expand=True)
 
+# History tab
+history_tab = ttk.Frame(results_notebook)
+results_notebook.add(history_tab, text="History")
+
+# History treeview with scrollbars
+history_container = tk.Frame(history_tab)
+history_container.pack(fill="both", expand=True)
+
+history_scroll_y = tk.Scrollbar(history_container, orient="vertical")
+history_scroll_x = tk.Scrollbar(history_container, orient="horizontal")
+
+history_tree = ttk.Treeview(
+    history_container,
+    columns=("Time", "Query", "Result"),
+    show="headings",
+    yscrollcommand=history_scroll_y.set,
+    xscrollcommand=history_scroll_x.set
+)
+
+history_tree.heading("Time", text="Time")
+history_tree.heading("Query", text="Query")
+history_tree.heading("Result", text="Result")
+
+history_tree.column("Time", width=150)
+history_tree.column("Query", width=400)
+history_tree.column("Result", width=150)
+
+# Color tags
+history_tree.tag_configure('success', foreground='green')
+history_tree.tag_configure('error', foreground='red')
+
+history_scroll_y.config(command=history_tree.yview)
+history_scroll_x.config(command=history_tree.xview)
+
+history_scroll_y.pack(side=tk.RIGHT, fill="y")
+history_scroll_x.pack(side=tk.BOTTOM, fill="x")
+history_tree.pack(side=tk.LEFT, fill="both", expand=True)
+
+# Bindings
+history_tree.bind("<Double-1>", on_history_double_click)
+history_tree.bind("<Button-3>", show_history_context_menu)
+
 # --- RIGHT SIDE (Snippets) ---
 right_frame = tk.Frame(root, width=300, bg="#e1e1e1", relief="sunken", bd=1)
 right_frame.grid_propagate(False)
@@ -492,5 +648,7 @@ s_btn_frame.pack(fill="x", pady=10)
 # --- START ---
 load_snippets()
 refresh_snippet_list()
+load_history()
+refresh_history_list()
 root.bind("<Control-Return>", run_current_query)
 root.mainloop()

@@ -57,9 +57,12 @@ def execute_query(query, results_notebook, conn_str):
         return
 
     # Clear existing result tabs
+    # Clear existing result tabs EXCEPT History
     for tab in results_notebook.winfo_children():
-        tab.destroy()
-
+        tab_index = results_notebook.index(tab)
+        tab_name = results_notebook.tab(tab_index, "text")
+        if tab_name != "History":
+            tab.destroy()
     try:
         conn = pyodbc.connect(conn_str, autocommit=True)
         cursor = conn.cursor()
