@@ -118,6 +118,15 @@ Button layout (top row):
 4. Click **Export** and choose save location
 5. File is saved with headers and all rows preserved (suggested filename: `query_results.csv` or `.xlsx`)
 
+- **Query History**: Full history of executed queries with timestamp, preview, and result status (success/green or error/red)
+  - View all past queries in the dedicated **History** tab at the bottom
+  - Double-click any entry to instantly load the query back into the editor
+  - Right-click on an entry for options:
+    - **Load Query** – reloads the selected query
+    - **Delete Entry** – removes just that history item
+    - **Clear All History** – permanently deletes all history (with confirmation)
+  - Automatically saves the last 100 queries (most recent first)
+
 ## Troubleshooting
 
 ### Connection Issues:
