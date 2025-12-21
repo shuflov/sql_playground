@@ -1,6 +1,22 @@
 import pyodbc
 from tkinter import messagebox, ttk
 import tkinter as tk
+import tkinter.font as tkfont
+
+def autosize_treeview_columns(tree, padding=20):
+    """
+    Auto-resize Treeview columns based on header and cell content.
+    """
+    font = tkfont.Font()
+
+    for col in tree["columns"]:
+        max_width = font.measure(col)
+
+        for item in tree.get_children():
+            value = tree.set(item, col)
+            max_width = max(max_width, font.measure(str(value)))
+
+        tree.column(col, width=max_width + padding)
 
 
 def create_scrollable_tree(parent, columns):
@@ -77,6 +93,7 @@ def execute_query(query, results_notebook, conn_str):
                         values = ["" if val is None else str(val) for val in row]
                         tag = "even" if i % 2 == 0 else "odd"
                         tree.insert("", "end", values=values, tags=(tag,))
+                    autosize_treeview_columns(tree)
 
                     tree.tag_configure("even", background="#f9f9f9")
                     tree.tag_configure("odd", background="#ffffff")
@@ -101,6 +118,8 @@ def execute_query(query, results_notebook, conn_str):
                     "end",
                     values=(f"Success: {affected} row(s) affected",)
                 )
+                autosize_treeview_columns(tree)
+
 
             if not cursor.nextset():
                 break
@@ -127,3 +146,5 @@ def execute_query(query, results_notebook, conn_str):
         tree.column("Error", anchor="w", width=900)
 
         tree.insert("", "end", values=(str(e),))
+        autosize_treeview_columns(tree)
+
