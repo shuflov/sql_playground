@@ -242,6 +242,21 @@ def on_snippet_arrow(delta):
 
     load_current_snippet_from_listbox()
 
+def show_snippet_context_menu(event):
+    """Show right-click menu on snippet"""
+    # Select the item under cursor
+    index = snippet_listbox.nearest(event.y)
+    if index >= 0:
+        snippet_listbox.selection_clear(0, tk.END)
+        snippet_listbox.selection_set(index)
+        
+        # Create context menu
+        context_menu = tk.Menu(root, tearoff=0)
+        context_menu.add_command(label="Edit", command=edit_snippet_gui)
+        context_menu.add_command(label="Delete", command=delete_snippet_gui)
+        
+        # Show menu at cursor position
+        context_menu.post(event.x_root, event.y_root)
 
 # ------------------- Syntax Highlighting -------------------
 def highlight_sql(event=None):
@@ -422,14 +437,14 @@ snippet_listbox.bind(
 
 snippet_listbox.focus_set()
 
-
+snippet_listbox.bind("<Button-3>", show_snippet_context_menu)  # Right-click
 
 s_btn_frame = tk.Frame(right_frame, bg="#e1e1e1")
 s_btn_frame.pack(fill="x", pady=10)
 
-tk.Button(s_btn_frame, text="Add", width=7, command=lambda: [add_snippet(simpledialog.askstring("Add", "Name:"), ""), refresh_snippet_list()]).pack(side=tk.LEFT, padx=5)
-tk.Button(s_btn_frame, text="Edit", width=7, command=edit_snippet_gui).pack(side=tk.LEFT, padx=2)
-tk.Button(s_btn_frame, text="Del", width=7, command=delete_snippet_gui).pack(side=tk.LEFT, padx=2)
+# --tk.Button(s_btn_frame, text="Add", width=7, command=lambda: [add_snippet(simpledialog.askstring("Add", "Name:"), ""), refresh_snippet_list()]).pack(side=tk.LEFT, padx=5)
+# --tk.Button(s_btn_frame, text="Edit", width=7, command=edit_snippet_gui).pack(side=tk.LEFT, padx=2)
+# --tk.Button(s_btn_frame, text="Del", width=7, command=delete_snippet_gui).pack(side=tk.LEFT, padx=2)
 tk.Button(s_btn_frame, text="↑ Up", width=6, command=move_snippet_up_gui).pack(side=tk.LEFT, padx=8)
 tk.Button(s_btn_frame, text="↓ Down", width=6, command=move_snippet_down_gui).pack(side=tk.LEFT, padx=2)
 
