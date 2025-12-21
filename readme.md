@@ -100,12 +100,12 @@ python sql_gui.py
 
 Button layout (top row):
 ```
-[ Run Query ] [ Clear ] [ Save as Snippet ]                    [ Export Results ]
+[ Run Query ] [ Clear ] [ Save as Snippet ]                   [ Save to Clipboard ] [ Export Results ]
 ```
 
 ### Managing Snippets
 
-- **Save Current Query**: Click **Save as Snippet** → enter a name (will ask to overwrite if exists)
+- **Save Current Query**: Click **Save as Snippet**→ enter a name (will ask to overwrite if exists)
 - **Use a Snippet**: Click any snippet in the right panel to load it into the editor
 - **Search**: Type in the search box above the snippet list to filter
 - **Edit / Delete**: Just use right click of your mouse
