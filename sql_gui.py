@@ -199,6 +199,7 @@ def copy_treeview_to_clipboard(tree):
     messagebox.showinfo("Copied", "Result table copied to clipboard.\nPaste directly into Excel.")
 
 
+
 # ------------------- Syntax Highlighting -------------------
 def highlight_sql(event=None):
     for tag in ["keyword", "string", "comment"]:

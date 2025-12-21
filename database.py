@@ -2,18 +2,52 @@ import pyodbc
 from tkinter import messagebox, ttk
 import tkinter as tk
 
+
+def create_scrollable_tree(parent, columns):
+    """
+    Create a Treeview with both vertical and horizontal scrollbars.
+    Returns the Treeview widget.
+    """
+    container = ttk.Frame(parent)
+    container.pack(fill="both", expand=True)
+
+    tree = ttk.Treeview(
+        container,
+        columns=columns,
+        show="headings"
+    )
+
+    y_scroll = ttk.Scrollbar(container, orient="vertical", command=tree.yview)
+    x_scroll = ttk.Scrollbar(container, orient="horizontal", command=tree.xview)
+
+    tree.configure(
+        yscrollcommand=y_scroll.set,
+        xscrollcommand=x_scroll.set
+    )
+
+    tree.grid(row=0, column=0, sticky="nsew")
+    y_scroll.grid(row=0, column=1, sticky="ns")
+    x_scroll.grid(row=1, column=0, sticky="ew")
+
+    container.grid_rowconfigure(0, weight=1)
+    container.grid_columnconfigure(0, weight=1)
+
+    return tree
+
+
 def execute_query(query, results_notebook, conn_str):
     if not query.strip():
         messagebox.showwarning("Warning", "Enter a query first!")
         return
 
-    # Clear all existing tabs
+    # Clear existing result tabs
     for tab in results_notebook.winfo_children():
         tab.destroy()
 
     try:
         conn = pyodbc.connect(conn_str, autocommit=True)
         cursor = conn.cursor()
+
         cursor.execute(query)
 
         result_count = 0
@@ -23,44 +57,50 @@ def execute_query(query, results_notebook, conn_str):
             has_any_result = True
             result_count += 1
 
+            tab_frame = ttk.Frame(results_notebook)
+
+            # ---------------- SELECT queries ----------------
             if cursor.description:
                 cols = [column[0] for column in cursor.description]
-
-                tab_frame = ttk.Frame(results_notebook)
                 results_notebook.add(tab_frame, text=f"Result {result_count}")
 
-                tree = ttk.Treeview(tab_frame, show="headings")
-                tree.pack(fill="both", expand=True)
+                tree = create_scrollable_tree(tab_frame, cols)
 
-                tree["columns"] = cols
-                tree.column("#0", width=0, stretch=False)
                 for col in cols:
                     tree.heading(col, text=col)
                     tree.column(col, anchor="center", width=120)
 
                 rows = cursor.fetchall()
+
                 if rows:
                     for i, row in enumerate(rows):
                         values = ["" if val is None else str(val) for val in row]
                         tag = "even" if i % 2 == 0 else "odd"
                         tree.insert("", "end", values=values, tags=(tag,))
+
                     tree.tag_configure("even", background="#f9f9f9")
                     tree.tag_configure("odd", background="#ffffff")
                 else:
-                    tree.insert("", "end", values=["(No rows returned)"] + [""] * (len(cols) - 1))
+                    tree.insert(
+                        "",
+                        "end",
+                        values=["(No rows returned)"] + [""] * (len(cols) - 1)
+                    )
 
+            # ---------------- Non-SELECT queries ----------------
             else:
                 affected = cursor.rowcount if cursor.rowcount >= 0 else "unknown"
-                tab_frame = ttk.Frame(results_notebook)
                 results_notebook.add(tab_frame, text=f"Query {result_count}")
 
-                tree = ttk.Treeview(tab_frame, show="headings")
-                tree.pack(fill="both", expand=True)
-
-                tree["columns"] = ("Message",)
+                tree = create_scrollable_tree(tab_frame, ("Message",))
                 tree.heading("Message", text="Execution Result")
-                tree.column("Message", width=500, anchor="w")
-                tree.insert("", "end", values=(f"Success: {affected} row(s) affected",))
+                tree.column("Message", anchor="w", width=600)
+
+                tree.insert(
+                    "",
+                    "end",
+                    values=(f"Success: {affected} row(s) affected",)
+                )
 
             if not cursor.nextset():
                 break
@@ -70,17 +110,20 @@ def execute_query(query, results_notebook, conn_str):
 
         if not has_any_result:
             tab_frame = ttk.Frame(results_notebook)
-            results_notebook.add(tab_frame, text="Result 1")
-            tree = ttk.Treeview(tab_frame)
-            tree.pack(fill="both", expand=True)
-            tree.insert("", "end", values=("Query executed successfully (no result set)",))
+            results_notebook.add(tab_frame, text="Result")
 
+            tree = create_scrollable_tree(tab_frame, ("Message",))
+            tree.heading("Message", text="Info")
+            tree.column("Message", anchor="w", width=600)
+            tree.insert("", "end", values=("Query executed successfully.",))
+
+    # ---------------- Error handling ----------------
     except Exception as e:
         tab_frame = ttk.Frame(results_notebook)
         results_notebook.add(tab_frame, text="Error")
-        tree = ttk.Treeview(tab_frame, show="headings")
-        tree.pack(fill="both", expand=True)
-        tree["columns"] = ("Error",)
+
+        tree = create_scrollable_tree(tab_frame, ("Error",))
         tree.heading("Error", text="SQL Error")
-        tree.column("Error", width=800)
+        tree.column("Error", anchor="w", width=900)
+
         tree.insert("", "end", values=(str(e),))
