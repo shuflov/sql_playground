@@ -280,7 +280,10 @@ def on_snippet_key_nav(event):
 def clear_all():
     query_text.delete("1.0", tk.END)
     for tab in results_notebook.winfo_children():
-        tab.destroy()
+        tab_index = results_notebook.index(tab)
+        tab_name = results_notebook.tab(tab_index, "text")
+        if tab_name != "History":
+            tab.destroy()
     # Add empty placeholder tab
     empty_tab = ttk.Frame(results_notebook)
     results_notebook.add(empty_tab, text="Results")
