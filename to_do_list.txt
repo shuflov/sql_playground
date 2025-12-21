@@ -1,9 +1,9 @@
 move run query button
-scroll snippets
+scrollbar snippets - done
 change size of result section
 arrows up, donw do not work in snippets section 
 ideally get rid of up, down buttons, use cursor to move snippets
-result section missing panels for moving table, snippets as well
+result section missing scrollbars right and bottom
 toggle button for changing screen from tabular to all on one screen
 maybe small ai chatbot below snippet section,.. connected to local llm or claude.ai,.. or both option
 result table copy button - done

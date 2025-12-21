@@ -349,10 +349,27 @@ search_entry = tk.Entry(right_frame, font=("Arial", 10))
 search_entry.pack(fill="x", padx=10, pady=5)
 search_entry.bind("<KeyRelease>", lambda e: refresh_snippet_list())
 
-snippet_listbox = tk.Listbox(right_frame, exportselection=False, font=("Arial", 10))
-snippet_listbox.pack(fill="both", expand=True, padx=10, pady=5)
+# --- Snippet list with scrollbar ---
+snippet_container = tk.Frame(right_frame, bg="#e1e1e1")
+snippet_container.pack(fill="both", expand=True, padx=10, pady=5)
+
+snippet_scrollbar = tk.Scrollbar(snippet_container, orient="vertical")
+
+snippet_listbox = tk.Listbox(
+    snippet_container,
+    exportselection=False,
+    font=("Arial", 10),
+    yscrollcommand=snippet_scrollbar.set
+)
+
+snippet_scrollbar.config(command=snippet_listbox.yview)
+
+snippet_listbox.pack(side=tk.LEFT, fill="both", expand=True)
+snippet_scrollbar.pack(side=tk.RIGHT, fill="y")
+
 snippet_listbox.bind("<<ListboxSelect>>", load_selected_snippet)
 snippet_listbox.focus_set()
+
 
 s_btn_frame = tk.Frame(right_frame, bg="#e1e1e1")
 s_btn_frame.pack(fill="x", pady=10)
