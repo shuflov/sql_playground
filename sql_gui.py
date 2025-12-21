@@ -258,6 +258,45 @@ def show_snippet_context_menu(event):
         # Show menu at cursor position
         context_menu.post(event.x_root, event.y_root)
 
+def on_snippet_drag_start(event):
+    """Store the index when drag starts"""
+    snippet_listbox.drag_start_index = snippet_listbox.nearest(event.y)
+
+def on_snippet_drag_motion(event):
+    """Reorder snippet when dragging"""
+    if not hasattr(snippet_listbox, 'drag_start_index'):
+        return
+    
+    current_index = snippet_listbox.nearest(event.y)
+    start_index = snippet_listbox.drag_start_index
+    
+    if current_index != start_index and 0 <= current_index < snippet_listbox.size():
+        # Get the actual snippet name
+        snippet_name = snippet_listbox.get(start_index)
+        snippets = get_filtered_snippets(search_entry.get())
+        actual_index = next((i for i, s in enumerate(snippets) if s["name"] == snippet_name), None)
+        
+        if actual_index is not None:
+            # Move in data
+            from snippets import current_snippets, save_snippets
+            if current_index > start_index:
+                for _ in range(current_index - start_index):
+                    if actual_index < len(current_snippets) - 1:
+                        current_snippets[actual_index], current_snippets[actual_index + 1] = \
+                            current_snippets[actual_index + 1], current_snippets[actual_index]
+                        actual_index += 1
+            else:
+                for _ in range(start_index - current_index):
+                    if actual_index > 0:
+                        current_snippets[actual_index], current_snippets[actual_index - 1] = \
+                            current_snippets[actual_index - 1], current_snippets[actual_index]
+                        actual_index -= 1
+            
+            save_snippets()
+            refresh_snippet_list()
+            snippet_listbox.selection_set(current_index)
+            snippet_listbox.drag_start_index = current_index
+
 # ------------------- Syntax Highlighting -------------------
 def highlight_sql(event=None):
     for tag in ["keyword", "string", "comment"]:
@@ -438,6 +477,8 @@ snippet_listbox.bind(
 snippet_listbox.focus_set()
 
 snippet_listbox.bind("<Button-3>", show_snippet_context_menu)  # Right-click
+snippet_listbox.bind("<Button-1>", on_snippet_drag_start)  # Left-click start
+snippet_listbox.bind("<B1-Motion>", on_snippet_drag_motion)  # Drag with left button
 
 s_btn_frame = tk.Frame(right_frame, bg="#e1e1e1")
 s_btn_frame.pack(fill="x", pady=10)
@@ -445,8 +486,8 @@ s_btn_frame.pack(fill="x", pady=10)
 # --tk.Button(s_btn_frame, text="Add", width=7, command=lambda: [add_snippet(simpledialog.askstring("Add", "Name:"), ""), refresh_snippet_list()]).pack(side=tk.LEFT, padx=5)
 # --tk.Button(s_btn_frame, text="Edit", width=7, command=edit_snippet_gui).pack(side=tk.LEFT, padx=2)
 # --tk.Button(s_btn_frame, text="Del", width=7, command=delete_snippet_gui).pack(side=tk.LEFT, padx=2)
-tk.Button(s_btn_frame, text="↑ Up", width=6, command=move_snippet_up_gui).pack(side=tk.LEFT, padx=8)
-tk.Button(s_btn_frame, text="↓ Down", width=6, command=move_snippet_down_gui).pack(side=tk.LEFT, padx=2)
+# --tk.Button(s_btn_frame, text="↑ Up", width=6, command=move_snippet_up_gui).pack(side=tk.LEFT, padx=8)
+# --tk.Button(s_btn_frame, text="↓ Down", width=6, command=move_snippet_down_gui).pack(side=tk.LEFT, padx=2)
 
 # --- START ---
 load_snippets()

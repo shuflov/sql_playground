@@ -2,10 +2,11 @@ move run query button
 scrollbar snippets - done
 change size of result section
 arrows up, donw do not work in snippets section - done
-ideally get rid of up, down buttons, use cursor to move snippets
+ideally get rid of up, down buttons, use cursor to move snippets - done
 result section missing scrollbars horizontal and vertical - done
 toggle button for changing screen from tabular to all on one screen
 maybe small ai chatbot below snippet section,.. connected to local llm or claude.ai,.. or both option
 result table copy button - done
 history of run query
 page development button with modal window - proper to_do_list and brainstorming part of it
+edit modal too small for any changes
