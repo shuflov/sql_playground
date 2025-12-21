@@ -170,6 +170,35 @@ def clear_all():
     empty_tree.pack(fill="both", expand=True)
     highlight_sql()
 
+def copy_treeview_to_clipboard(tree):
+    if tree is None:
+        messagebox.showwarning("No Selection", "No result table selected.")
+        return
+
+    columns = tree["columns"]
+    if not columns:
+        messagebox.showwarning("No Data", "Nothing to copy.")
+        return
+
+    # Header row
+    lines = ["\t".join(columns)]
+
+    # Data rows
+    for child in tree.get_children():
+        values = tree.item(child)["values"]
+        values = ["" if v is None else str(v) for v in values]
+        lines.append("\t".join(values))
+
+    text = "\n".join(lines)
+
+    # Copy to clipboard
+    root.clipboard_clear()
+    root.clipboard_append(text)
+    root.update()  # keeps clipboard after app closes
+
+    messagebox.showinfo("Copied", "Result table copied to clipboard.\nPaste directly into Excel.")
+
+
 # ------------------- Syntax Highlighting -------------------
 def highlight_sql(event=None):
     for tag in ["keyword", "string", "comment"]:
@@ -277,10 +306,28 @@ right_btn_frame.grid(row=0, column=1, sticky="e", padx=(0, 10))
 tk.Button(right_btn_frame, text="Change DB", command=change_database, width=12,
           bg="#4a90e2", fg="white", relief="raised").pack(side=tk.LEFT, padx=(0, 8))
 
-# Export Results button — green (different color!)
-tk.Button(right_btn_frame, text="Export Results", 
-          command=lambda: export_results(get_current_treeview()), 
-          width=15, bg="#2ecc71", fg="white", relief="raised").pack(side=tk.LEFT)
+# Copy Results button — neutral
+tk.Button(
+    right_btn_frame,
+    text="Copy Results",
+    command=lambda: copy_treeview_to_clipboard(get_current_treeview()),
+    width=14,
+    bg="#bdc3c7",
+    relief="raised"
+).pack(side=tk.LEFT, padx=(0, 8))
+
+# Export Results button — green
+tk.Button(
+    right_btn_frame,
+    text="Export Results",
+    command=lambda: export_results(get_current_treeview()),
+    width=15,
+    bg="#2ecc71",
+    fg="white",
+    relief="raised"
+).pack(side=tk.LEFT)
+
+
 # --- RESULTS: Multi-tab Notebook ---
 results_notebook = ttk.Notebook(left_frame)
 results_notebook.grid(row=4, column=0, sticky="nsew", pady=(10,0))

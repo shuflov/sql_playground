@@ -6,5 +6,6 @@ ideally get rid of up, down buttons, use cursor to move snippets
 result section missing panels for moving table, snippets as well
 toggle button for changing screen from tabular to all on one screen
 maybe small ai chatbot below snippet section,.. connected to local llm or claude.ai,.. or both option
-result table copy button
-...
+result table copy button - done
+history of run query
+page development button with modal window - proper to_do_list and brainstorming part of it
