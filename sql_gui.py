@@ -159,6 +159,10 @@ def move_snippet_down_gui():
                     snippet_listbox.see(new_idx)
             break
 
+def on_snippet_key_nav(event):
+    snippet_listbox.after(1, load_current_snippet_from_listbox)
+
+
 def clear_all():
     query_text.delete("1.0", tk.END)
     for tab in results_notebook.winfo_children():
@@ -198,6 +202,45 @@ def copy_treeview_to_clipboard(tree):
 
     messagebox.showinfo("Copied", "Result table copied to clipboard.\nPaste directly into Excel.")
 
+def load_current_snippet_from_listbox(set_focus=False):
+    selection = snippet_listbox.curselection()
+    if not selection:
+        return
+
+    index = selection[0]
+    name = snippet_listbox.get(index)
+
+    for s in get_filtered_snippets(search_entry.get()):
+        if s["name"] == name:
+            query_text.delete("1.0", tk.END)
+            query_text.insert("1.0", s["sql"])
+            highlight_sql()
+
+            if set_focus:
+                query_text.focus_set()
+            break
+
+
+def on_snippet_arrow(delta):
+    size = snippet_listbox.size()
+    if size == 0:
+        return "break"
+
+    selection = snippet_listbox.curselection()
+    index = selection[0] if selection else 0
+
+    new_index = max(0, min(size - 1, index + delta))
+
+    snippet_listbox.selection_clear(0, tk.END)
+    snippet_listbox.selection_set(new_index)
+    snippet_listbox.activate(new_index)
+    snippet_listbox.see(new_index)
+
+    load_current_snippet_from_listbox(set_focus=False)
+
+    return "break"  # ⛔ stop Tkinter default behavior
+
+    load_current_snippet_from_listbox()
 
 
 # ------------------- Syntax Highlighting -------------------
@@ -363,13 +406,22 @@ snippet_listbox = tk.Listbox(
     yscrollcommand=snippet_scrollbar.set
 )
 
+snippet_listbox.bind("<Up>", lambda e: on_snippet_arrow(-1))
+snippet_listbox.bind("<Down>", lambda e: on_snippet_arrow(1))
+snippet_listbox.bind("<Return>", lambda e: load_current_snippet_from_listbox(set_focus=True))
+
 snippet_scrollbar.config(command=snippet_listbox.yview)
 
 snippet_listbox.pack(side=tk.LEFT, fill="both", expand=True)
 snippet_scrollbar.pack(side=tk.RIGHT, fill="y")
 
-snippet_listbox.bind("<<ListboxSelect>>", load_selected_snippet)
+snippet_listbox.bind(
+    "<<ListboxSelect>>",
+    lambda e: load_current_snippet_from_listbox(set_focus=True)
+)
+
 snippet_listbox.focus_set()
+
 
 
 s_btn_frame = tk.Frame(right_frame, bg="#e1e1e1")
