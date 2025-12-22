@@ -30,6 +30,82 @@ except Exception:
 
 # ------------------- GUI Helper Functions -------------------
 
+class EditSnippetDialog:
+    """Custom dialog for editing snippets with larger text area"""
+    def __init__(self, parent, title, name, sql):
+        self.result_name = None
+        self.result_sql = None
+        
+        self.dialog = tk.Toplevel(parent)
+        self.dialog.title(title)
+        self.dialog.geometry("700x500")
+        self.dialog.transient(parent)
+        self.dialog.grab_set()
+        
+        # Make dialog resizable
+        self.dialog.resizable(True, True)
+        
+        # Configure grid
+        self.dialog.grid_rowconfigure(2, weight=1)
+        self.dialog.grid_columnconfigure(0, weight=1)
+        
+        # Name field
+        name_label = tk.Label(self.dialog, text="Snippet Name:", font=("Arial", 10, "bold"))
+        name_label.grid(row=0, column=0, sticky="w", padx=10, pady=(10, 5))
+        
+        self.name_entry = tk.Entry(self.dialog, font=("Arial", 11))
+        self.name_entry.grid(row=1, column=0, sticky="ew", padx=10, pady=5)
+        self.name_entry.insert(0, name)
+        
+        # SQL field
+        sql_label = tk.Label(self.dialog, text="SQL Query:", font=("Arial", 10, "bold"))
+        sql_label.grid(row=2, column=0, sticky="w", padx=10, pady=(10, 5))
+        
+        # Frame for text with scrollbar
+        text_frame = tk.Frame(self.dialog)
+        text_frame.grid(row=3, column=0, sticky="nsew", padx=10, pady=5)
+        text_frame.grid_rowconfigure(0, weight=1)
+        text_frame.grid_columnconfigure(0, weight=1)
+        self.dialog.grid_rowconfigure(3, weight=1)
+        
+        self.sql_text = scrolledtext.ScrolledText(
+            text_frame, 
+            height=15, 
+            font=("Consolas", 11),
+            bg="white", 
+            fg="black",
+            wrap=tk.NONE
+        )
+        self.sql_text.grid(row=0, column=0, sticky="nsew")
+        self.sql_text.insert("1.0", sql)
+        
+        # Buttons frame
+        btn_frame = tk.Frame(self.dialog)
+        btn_frame.grid(row=4, column=0, pady=15)
+        
+        tk.Button(btn_frame, text="Save", command=self.save, width=15, 
+                  bg="#2ecc71", fg="white", font=("Arial", 10, "bold")).pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_frame, text="Cancel", command=self.cancel, width=15,
+                  bg="#e74c3c", fg="white", font=("Arial", 10, "bold")).pack(side=tk.LEFT, padx=5)
+        
+        # Center the dialog
+        self.dialog.update_idletasks()
+        x = (self.dialog.winfo_screenwidth() // 2) - (self.dialog.winfo_width() // 2)
+        y = (self.dialog.winfo_screenheight() // 2) - (self.dialog.winfo_height() // 2)
+        self.dialog.geometry(f"+{x}+{y}")
+        
+        # Focus on name field
+        self.name_entry.focus_set()
+        self.name_entry.select_range(0, tk.END)
+        
+    def save(self):
+        self.result_name = self.name_entry.get().strip()
+        self.result_sql = self.sql_text.get("1.0", "end-1c").strip()
+        self.dialog.destroy()
+        
+    def cancel(self):
+        self.dialog.destroy()
+
 def refresh_snippet_list():
     search_term = search_entry.get()
     filtered = get_filtered_snippets(search_term)
@@ -227,15 +303,18 @@ def save_new_snippet_gui():
 
 def edit_snippet_gui():
     selection = snippet_listbox.curselection()
-    if not selection: return
+    if not selection: 
+        return
+    
     old_name = snippet_listbox.get(selection[0])
     for s in get_filtered_snippets(search_entry.get()):
         if s["name"] == old_name:
-            new_name = simpledialog.askstring("Edit", "Name:", initialvalue=s["name"])
-            if not new_name: return
-            new_sql = simpledialog.askstring("Edit", "SQL:", initialvalue=s["sql"])
-            if new_sql is not None:
-                edit_snippet(old_name, new_name, new_sql)
+            # Use custom dialog instead of simpledialog
+            dialog = EditSnippetDialog(root, "Edit Snippet", s["name"], s["sql"])
+            root.wait_window(dialog.dialog)
+            
+            if dialog.result_name and dialog.result_sql:
+                edit_snippet(old_name, dialog.result_name, dialog.result_sql)
                 refresh_snippet_list()
             break
 
