@@ -17,10 +17,20 @@ A simple, offline SQL training application built with Python and Tkinter. Perfec
 ## Project Structure
 
 ```
-├── sql_gui.py              # Complete application (GUI, database, snippets, export)
-├── snippets.example.json   # Template/example snippets (copy to snippets.json if desired)
-├── .gitignore              # Ignores private files like snippets.json
-└── README.md               # This file
+├── .gitignore
+├── __pycache__
+    ├── export.cpython-314.pyc
+    ├── database.cpython-314.pyc
+    ├── history.cpython-314.pyc
+    └── snippets.cpython-314.pyc
+├── to_do_list.txt
+├── history.py
+├── snippets.py
+├── snippets.example.json
+├── export.py
+├── readme.md
+├── database.py
+└── sql_gui.py
 ```
 
 ## Requirements
@@ -118,6 +128,8 @@ Button layout (top row):
 3. A small dialog appears — choose CSV (default) or Excel
 4. Click **Export** and choose save location
 5. File is saved with headers and all rows preserved (suggested filename: `query_results.csv` or `.xlsx`)
+
+### History
 
 - **Query History**: Full history of executed queries with timestamp, preview, and result status (success/green or error/red)
   - View all past queries in the dedicated **History** tab at the bottom
