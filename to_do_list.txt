@@ -4,8 +4,10 @@ maybe small ai chatbot below snippet section,.. connected to local llm or claude
 page development button with modal window - proper to_do_list and brainstorming part of it
 code in main py (which has strange name) is too big
 set up settings button - dark mode, .. add more ideas
+fix status bar bugs, like font of rows, update after clear all,..
 
 done
+add status bar - done
 add line numbers into query section - done
 edit modal too small for any changes - done
 update readme.md with new feature - history - done
