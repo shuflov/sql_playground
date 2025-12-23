@@ -178,6 +178,9 @@ conn_str = get_conn_str(current_db)
 
 
 def run_current_query(event=None):
+    import time
+    start_time = time.time()
+    
     query = query_text.get("1.0", "end-1c").strip()
     if not query:
         messagebox.showwarning("Empty Query", "Please enter a query.")
@@ -195,29 +198,55 @@ def run_current_query(event=None):
             # Non-SELECT query
             rows_affected = cursor.rowcount if cursor.rowcount >= 0 else 0
             result_info = f"{rows_affected} row(s) affected"
+            row_count = rows_affected
             conn.commit()
         else:
             # SELECT query
             rows = cursor.fetchall()
             result_info = f"{len(rows)} rows"
+            row_count = len(rows)
         
         cursor.close()
         conn.close()
+        
+        # Calculate execution time
+        execution_time = time.time() - start_time
         
         # Success - add to history
         add_history_entry(query, "success", result_info)
         refresh_history_list()
         
+        # Update status bar
+        update_status_bar(f"Executed in {execution_time:.3f}s", row_count, "success")
+        
     except Exception as e:
+        execution_time = time.time() - start_time
         # Error - add to history
         add_history_entry(query, "error", str(e)[:100])
         refresh_history_list()
+        
+        # Update status bar
+        update_status_bar(f"Error in {execution_time:.3f}s", 0, "error")
     
     # Now use the original execute_query to display results
     execute_query(query, results_notebook, conn_str)
     # Select the first result tab (not History)
     if results_notebook.index("end") > 0:
         results_notebook.select(1)
+
+def update_status_bar(execution_msg, row_count, status):
+    """Update the status bar with execution info"""
+    # Update execution time
+    status_exec_label.config(text=execution_msg)
+    
+    # Update row count
+    if status == "success":
+        status_rows_label.config(text=f"Rows: {row_count}", fg="green")
+    else:
+        status_rows_label.config(text="Error", fg="red")
+    
+    # Update database name (in case it changed)
+    status_db_label.config(text=f"DB: {current_db}")
 
 def get_current_treeview():
     """Return the Treeview widget from the currently selected tab, or None."""
@@ -335,6 +364,8 @@ def save_new_snippet_gui():
     if name:
         save_current_as_snippet(name, sql)
         refresh_snippet_list()
+        # Update status bar
+        status_snippet_label.config(text=f"Saved: {name[:30]}...")
 
 def edit_snippet_gui():
     selection = snippet_listbox.curselection()
@@ -597,6 +628,7 @@ style.configure("Treeview.Heading", background="#e1e1e1", font=("Segoe UI", 9, "
 root.grid_columnconfigure(0, weight=1)  # Left (main) expands
 root.grid_columnconfigure(1, weight=0)  # Right (snippets) fixed width
 root.grid_rowconfigure(0, weight=1)
+root.grid_rowconfigure(1, weight=0)  # line for status bar
 
 # --- LEFT SIDE: Use PanedWindow for resizable split ---
 left_pane = ttk.PanedWindow(root, orient=tk.VERTICAL)
@@ -796,6 +828,41 @@ s_btn_frame.pack(fill="x", pady=10)
 tk.Button(s_btn_frame, text="Change DB", command=change_database, width=12,
           bg="#4a90e2", fg="white", relief="raised").pack(side=tk.LEFT, padx=(0, 8))
 tk.Button(s_btn_frame, text="Settings", width=12,bg="#ebedf0", relief="raised").pack(side=tk.LEFT, padx=(0, 8))
+
+# --- STATUS BAR at bottom ---
+status_bar = tk.Frame(root, bg="#2c3e50", height=30, relief="sunken", bd=1)
+status_bar.grid(row=1, column=0, columnspan=2, sticky="ew")
+status_bar.grid_propagate(False)
+
+# Execution time
+status_exec_label = tk.Label(status_bar, text="Ready", bg="#2c3e50", fg="white", 
+                             font=("Arial", 9), anchor="w", padx=10)
+status_exec_label.pack(side=tk.LEFT, fill="x")
+
+# Separator
+tk.Label(status_bar, text="|", bg="#2c3e50", fg="#7f8c8d", font=("Arial", 9)).pack(side=tk.LEFT, padx=5)
+
+# Row count
+status_rows_label = tk.Label(status_bar, text="Rows: -", bg="#2c3e50", fg="#ecf4f4", 
+                             font=("Arial", 9), anchor="w")
+status_rows_label.pack(side=tk.LEFT, padx=5)
+
+# Separator
+tk.Label(status_bar, text="|", bg="#2c3e50", fg="#7f8c8d", font=("Arial", 9)).pack(side=tk.LEFT, padx=5)
+
+# Database name
+status_db_label = tk.Label(status_bar, text=f"DB: {current_db}", bg="#2c3e50", fg="#3498db", 
+                          font=("Arial", 9, "bold"), anchor="w")
+status_db_label.pack(side=tk.LEFT, padx=5)
+
+# Separator
+tk.Label(status_bar, text="|", bg="#2c3e50", fg="#7f8c8d", font=("Arial", 9)).pack(side=tk.LEFT, padx=5)
+
+# Last saved snippet
+status_snippet_label = tk.Label(status_bar, text="No snippet saved", bg="#2c3e50", fg="#95a5a6", 
+                               font=("Arial", 9, "italic"), anchor="w")
+status_snippet_label.pack(side=tk.LEFT, padx=5)
+
 
 # --- START ---
 load_snippets()
