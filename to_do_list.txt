@@ -6,6 +6,7 @@ code in main py (which has strange name) is too big
 set up settings button - dark mode, .. add more ideas
 
 done
+add line numbers into query section - done
 edit modal too small for any changes - done
 update readme.md with new feature - history - done
 export results stoped working - done
