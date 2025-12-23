@@ -137,6 +137,10 @@ class TextLineNumbers(tk.Canvas):
             except:
                 break
 
+def on_scroll(*args):
+    query_text.yview(*args)
+    query_text.after(1, line_numbers.redraw)
+
 def refresh_snippet_list():
     search_term = search_entry.get()
     filtered = get_filtered_snippets(search_term)
@@ -636,11 +640,33 @@ line_numbers.text_widget = query_text
 query_text.tag_configure("keyword", foreground="#0000FF", font=("Consolas", 11, "bold"))
 query_text.tag_configure("string", foreground="#008000")
 query_text.tag_configure("comment", foreground="#808080")
-# Update line numbers on any change
-query_text.bind("<KeyRelease>", lambda e: [schedule_highlight(e), line_numbers.redraw()])
-query_text.bind("<FocusIn>", lambda e: [schedule_highlight(e), line_numbers.redraw()])
-query_text.bind("<MouseWheel>", lambda e: line_numbers.redraw())
+query_text.vbar.configure(command=on_scroll)
+
+# Syntax highlighting setup
+query_text.tag_configure("keyword", foreground="#0000FF", font=("Consolas", 11, "bold"))
+query_text.tag_configure("string", foreground="#008000")
+query_text.tag_configure("comment", foreground="#808080")
+
+# Combined update function
+def update_editor(event=None):
+    schedule_highlight(event)
+    query_text.after(1, line_numbers.redraw)
+
+# Bind ALL events that might change view or content
+query_text.bind("<KeyPress>", update_editor)
+query_text.bind("<KeyRelease>", update_editor)
+query_text.bind("<FocusIn>", update_editor)
+query_text.bind("<MouseWheel>", lambda e: query_text.after(1, line_numbers.redraw))
 query_text.bind("<Button-1>", lambda e: query_text.after(10, line_numbers.redraw))
+query_text.bind("<ButtonRelease-1>", lambda e: query_text.after(1, line_numbers.redraw))
+
+# Poll for changes regularly (catches everything including scrollbar dragging)
+def poll_line_numbers():
+    line_numbers.redraw()
+    query_text.after(100, poll_line_numbers)  # Check every 100ms
+
+# Start polling
+query_text.after(100, poll_line_numbers)
 
 # Initial draw
 line_numbers.redraw()
