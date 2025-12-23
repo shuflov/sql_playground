@@ -106,6 +106,37 @@ class EditSnippetDialog:
     def cancel(self):
         self.dialog.destroy()
 
+class TextLineNumbers(tk.Canvas):
+    """Canvas widget that displays line numbers for a Text widget"""
+    def __init__(self, parent, text_widget, **kwargs):
+        tk.Canvas.__init__(self, parent, **kwargs)
+        self.text_widget = text_widget
+        
+    def redraw(self, *args):
+        """Redraw line numbers"""
+        self.delete("all")
+        
+        # Get the number of lines in the text widget
+        i = self.text_widget.index("@0,0")
+        start_line = int(i.split('.')[0])
+        
+        # Get the last visible line
+        last_visible = self.text_widget.index("@0,%d" % self.text_widget.winfo_height())
+        end_line = int(last_visible.split('.')[0])
+        
+        # Draw line numbers for visible lines
+        for line_num in range(start_line, end_line + 1):
+            try:
+                # Get the y coordinate of this line
+                line_index = f"{line_num}.0"
+                bbox = self.text_widget.bbox(line_index)
+                if bbox:
+                    y = bbox[1]
+                    self.create_text(35, y, anchor="ne", text=str(line_num), 
+                                   font=("Consolas", 11), fill="#999999")
+            except:
+                break
+
 def refresh_snippet_list():
     search_term = search_entry.get()
     filtered = get_filtered_snippets(search_term)
@@ -582,17 +613,37 @@ tk.Label(title_frame, text="SQL Query:", bg="#f0f0f0", font=("Arial", 10, "bold"
 db_label = tk.Label(title_frame, text=f"Database: {current_db}", bg="#f0f0f0", font=("Arial", 10, "italic"), fg="#2c3e50")
 db_label.pack(side=tk.LEFT, padx=(20, 0))
 
-# Query editor
-query_text = scrolledtext.ScrolledText(top_frame, height=10, font=("Consolas", 11),
-                                      bg="white", fg="black", insertbackground="black", relief="sunken", bd=2)
-query_text.grid(row=1, column=0, sticky="nsew", pady=(0,10))
+# Query editor with line numbers
+query_frame = tk.Frame(top_frame, bg="#f0f0f0")
+query_frame.grid(row=1, column=0, sticky="nsew", pady=(0,10))
+query_frame.grid_rowconfigure(0, weight=1)
+query_frame.grid_columnconfigure(1, weight=1)
+
+# Line numbers canvas
+line_numbers = TextLineNumbers(query_frame, None, width=40, bg="#e8e8e8", highlightthickness=0)
+line_numbers.grid(row=0, column=0, sticky="nsew")
+
+# Query text area
+query_text = scrolledtext.ScrolledText(query_frame, height=10, font=("Consolas", 11),
+                                      bg="white", fg="black", insertbackground="black", 
+                                      relief="sunken", bd=2, wrap="none")
+query_text.grid(row=0, column=1, sticky="nsew")
+
+# Connect line numbers to text widget
+line_numbers.text_widget = query_text
 
 # Syntax highlighting setup (same as before)
 query_text.tag_configure("keyword", foreground="#0000FF", font=("Consolas", 11, "bold"))
 query_text.tag_configure("string", foreground="#008000")
 query_text.tag_configure("comment", foreground="#808080")
-query_text.bind("<KeyRelease>", schedule_highlight)
-query_text.bind("<FocusIn>", schedule_highlight)
+# Update line numbers on any change
+query_text.bind("<KeyRelease>", lambda e: [schedule_highlight(e), line_numbers.redraw()])
+query_text.bind("<FocusIn>", lambda e: [schedule_highlight(e), line_numbers.redraw()])
+query_text.bind("<MouseWheel>", lambda e: line_numbers.redraw())
+query_text.bind("<Button-1>", lambda e: query_text.after(10, line_numbers.redraw))
+
+# Initial draw
+line_numbers.redraw()
 
 # Buttons row
 btn_frame = tk.Frame(top_frame, bg="#f0f0f0")
@@ -718,10 +769,7 @@ s_btn_frame.pack(fill="x", pady=10)
 # Change DB button — blue
 tk.Button(s_btn_frame, text="Change DB", command=change_database, width=12,
           bg="#4a90e2", fg="white", relief="raised").pack(side=tk.LEFT, padx=(0, 8))
-# --tk.Button(s_btn_frame, text="Edit", width=7, command=edit_snippet_gui).pack(side=tk.LEFT, padx=2)
-# --tk.Button(s_btn_frame, text="Del", width=7, command=delete_snippet_gui).pack(side=tk.LEFT, padx=2)
-# --tk.Button(s_btn_frame, text="↑ Up", width=6, command=move_snippet_up_gui).pack(side=tk.LEFT, padx=8)
-# --tk.Button(s_btn_frame, text="↓ Down", width=6, command=move_snippet_down_gui).pack(side=tk.LEFT, padx=2)
+tk.Button(s_btn_frame, text="Settings", width=12,bg="#ebedf0", relief="raised").pack(side=tk.LEFT, padx=(0, 8))
 
 # --- START ---
 load_snippets()
