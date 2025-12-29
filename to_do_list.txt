@@ -2,9 +2,11 @@ move run query button
 toggle button for changing screen from tabular to all on one screen
 maybe small ai chatbot below snippet section,.. connected to local llm or claude.ai,.. or both option
 page development button with modal window - proper to_do_list and brainstorming part of it
-code in main py (which has strange name) is too big
+code in main py (which has strange name) is too big,.. make reduction, split to another py files
 set up settings button - dark mode, .. add more ideas
 fix status bar bugs, like font of rows, update after clear all,..
+check functionality of all control+ buttons
+backup option
 
 done
 add status bar - done

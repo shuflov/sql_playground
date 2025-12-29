@@ -50,13 +50,11 @@ def create_scrollable_tree(parent, columns):
 
     return tree
 
-
 def execute_query(query, results_notebook, conn_str):
     if not query.strip():
         messagebox.showwarning("Warning", "Enter a query first!")
         return
 
-    # Clear existing result tabs
     # Clear existing result tabs EXCEPT History
     for tab in results_notebook.winfo_children():
         tab_index = results_notebook.index(tab)
@@ -123,7 +121,6 @@ def execute_query(query, results_notebook, conn_str):
                 )
                 autosize_treeview_columns(tree)
 
-
             if not cursor.nextset():
                 break
 
@@ -150,4 +147,3 @@ def execute_query(query, results_notebook, conn_str):
 
         tree.insert("", "end", values=(str(e),))
         autosize_treeview_columns(tree)
-
