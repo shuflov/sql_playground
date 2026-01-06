@@ -577,7 +577,7 @@ def highlight_sql(event=None):
     
     content = query_text.get("1.0", tk.END)
     
-    keywords = r"\b(SELECT|FROM|WHERE|AND|OR|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|DROP|ALTER|JOIN|INNER|LEFT|RIGHT|ON|GROUP BY|ORDER BY|HAVING|AS|DISTINCT|COUNT|SUM|AVG|MIN|MAX|NULL|IS|NOT|LIKE|BETWEEN|IN|EXISTS|ALL|ANY|UNION|CASE|WHEN|THEN|ELSE|END)\b"
+    keywords = r"\b(SELECT|FROM|WHERE|AND|OR|INSERT|INTO|VALUES|PROCEDURE|UPDATE|SET|DELETE|CREATE|TABLE|DROP|ALTER|JOIN|INNER|LEFT|RIGHT|ON|GROUP BY|ORDER BY|HAVING|AS|DISTINCT|COUNT|SUM|AVG|MIN|MAX|NULL|IS|NOT|LIKE|BETWEEN|IN|EXISTS|ALL|ANY|UNION|CASE|WHEN|THEN|ELSE|END)\b"
     for match in re.finditer(keywords, content, re.IGNORECASE):
         start = query_text.index(f"1.0 + {match.start()} chars")
         end = query_text.index(f"1.0 + {match.end()} chars")
@@ -711,18 +711,18 @@ btn_frame.grid_columnconfigure(0, weight=1)
 left_btn_frame = tk.Frame(btn_frame, bg="#f0f0f0")
 left_btn_frame.grid(row=0, column=0, sticky="w")
 
-tk.Button(left_btn_frame, text="Run Query", command=run_current_query, bg="#c0f405", width=15).pack(side=tk.LEFT, padx=2)
-tk.Button(left_btn_frame, text="Clear", command=clear_all, width=12).pack(side=tk.LEFT, padx=2)
-tk.Button(left_btn_frame, text="Save as Snippet", command=save_new_snippet_gui, width=15).pack(side=tk.LEFT, padx=2)
+tk.Button(left_btn_frame, text="Run Query", command=run_current_query, bg="#c0f405", width=15, cursor="hand2").pack(side=tk.LEFT, padx=2)
+tk.Button(left_btn_frame, text="Clear", command=clear_all, width=12, cursor="hand2").pack(side=tk.LEFT, padx=2)
+tk.Button(left_btn_frame, text="Save as Snippet", command=save_new_snippet_gui, width=15, cursor="hand2").pack(side=tk.LEFT, padx=2)
 
 right_btn_frame = tk.Frame(btn_frame, bg="#f0f0f0")
 right_btn_frame.grid(row=0, column=1, sticky="e")
 
 tk.Button(right_btn_frame, text="Copy Results", command=lambda: copy_treeview_to_clipboard(get_current_treeview()),
-          width=14, bg="#bdc3c7").pack(side=tk.LEFT, padx=(0, 8))
+          width=14, bg="#bdc3c7", cursor="hand2").pack(side=tk.LEFT, padx=(0, 8))
 
 tk.Button(right_btn_frame, text="Export Results", command=lambda: export_results(get_current_treeview()),
-          width=15, bg="#2ecc71", fg="white").pack(side=tk.LEFT)
+          width=15, bg="#2ecc71", fg="white", cursor="hand2").pack(side=tk.LEFT)
 
 # Bottom pane: Results notebook
 results_notebook = ttk.Notebook(left_pane)
@@ -826,8 +826,8 @@ s_btn_frame.pack(fill="x", pady=10)
 #tk.Button(s_btn_frame, text="Page Development", bg="#10d931").pack(side=tk.LEFT, padx=5)
 # Change DB button — blue
 tk.Button(s_btn_frame, text="Change DB", command=change_database, width=12,
-          bg="#4a90e2", fg="white", relief="raised").pack(side=tk.LEFT, padx=(0, 8))
-tk.Button(s_btn_frame, text="Settings", width=12,bg="#ebedf0", relief="raised").pack(side=tk.LEFT, padx=(0, 8))
+          bg="#4a90e2", fg="white", relief="raised", cursor="hand2").pack(side=tk.LEFT, padx=(10, 8))
+tk.Button(s_btn_frame, text="Settings", width=12,bg="#ebedf0", relief="raised", cursor="hand2").pack(side=tk.LEFT, padx=(0, 8))
 
 # --- STATUS BAR at bottom ---
 status_bar = tk.Frame(root, bg="#2c3e50", height=30, relief="sunken", bd=1)
