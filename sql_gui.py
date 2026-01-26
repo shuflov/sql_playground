@@ -137,6 +137,9 @@ class TextLineNumbers(tk.Canvas):
             except:
                 break
 
+# ... existing imports and DPI settings ...
+
+
 def on_scroll(*args):
     query_text.yview(*args)
     query_text.after(1, line_numbers.redraw)
@@ -176,32 +179,33 @@ def get_conn_str(db_name):
 
 conn_str = get_conn_str(current_db)
 
+# ... existing imports and DPI settings ...
 
+current_db = "test"  # existing line
+is_running_query = False  # <--- ADD THIS LINE HERE
 def run_current_query(event=None):
+    global is_running_query
+    is_running_query = True
     import time
     start_time = time.time()
-    
+
     query = query_text.get("1.0", "end-1c").strip()
     if not query:
         messagebox.showwarning("Empty Query", "Please enter a query.")
+        is_running_query = False
         return
     
-    # Track for history before execution
     try:
-        # Try to execute and capture what happens
         conn = pyodbc.connect(conn_str)
         cursor = conn.cursor()
         cursor.execute(query)
         
-        # Determine result type for history
         if cursor.description is None:
-            # Non-SELECT query
             rows_affected = cursor.rowcount if cursor.rowcount >= 0 else 0
             result_info = f"{rows_affected} row(s) affected"
             row_count = rows_affected
             conn.commit()
         else:
-            # SELECT query
             rows = cursor.fetchall()
             result_info = f"{len(rows)} rows"
             row_count = len(rows)
@@ -209,30 +213,33 @@ def run_current_query(event=None):
         cursor.close()
         conn.close()
         
-        # Calculate execution time
         execution_time = time.time() - start_time
-        
-        # Success - add to history
         add_history_entry(query, "success", result_info)
         refresh_history_list()
-        
-        # Update status bar
         update_status_bar(f"Executed in {execution_time:.3f}s", row_count, "success")
-        
+
+        execute_query(query, results_notebook, conn_str)
+        if results_notebook.index("end") > 0:
+            results_notebook.select(1)
+
     except Exception as e:
         execution_time = time.time() - start_time
-        # Error - add to history
         add_history_entry(query, "error", str(e)[:100])
         refresh_history_list()
-        
-        # Update status bar
         update_status_bar(f"Error in {execution_time:.3f}s", 0, "error")
-    
-    # Now use the original execute_query to display results
-    execute_query(query, results_notebook, conn_str)
-    # Select the first result tab (not History)
-    if results_notebook.index("end") > 0:
-        results_notebook.select(1)
+        messagebox.showerror("Query Error", str(e))
+    finally:
+        is_running_query = False
+
+
+def on_key_release(event):
+    global is_running_query
+    if not is_running_query:  # Only format if not running a query
+        query = query_text.get("1.0", tk.END).strip()
+        formatted_query = format_sql_keywords(query)
+        query_text.delete("1.0", tk.END)
+        query_text.insert("1.0", formatted_query)
+        highlight_sql()
 
 def update_status_bar(execution_msg, row_count, status):
     """Update the status bar with execution info"""
@@ -686,6 +693,7 @@ def update_editor(event=None):
 
 # Bind ALL events that might change view or content
 query_text.bind("<KeyPress>", update_editor)
+query_text.bind("<KeyRelease>", on_key_release)
 query_text.bind("<KeyRelease>", update_editor)
 query_text.bind("<FocusIn>", update_editor)
 query_text.bind("<MouseWheel>", lambda e: query_text.after(1, line_numbers.redraw))
@@ -862,7 +870,6 @@ tk.Label(status_bar, text="|", bg="#2c3e50", fg="#7f8c8d", font=("Arial", 9)).pa
 status_snippet_label = tk.Label(status_bar, text="No snippet saved", bg="#2c3e50", fg="#95a5a6", 
                                font=("Arial", 9, "italic"), anchor="w")
 status_snippet_label.pack(side=tk.LEFT, padx=5)
-
 
 # --- START ---
 load_snippets()
