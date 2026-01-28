@@ -588,7 +588,15 @@ def highlight_sql(event=None):
     for match in re.finditer(keywords, content, re.IGNORECASE):
         start = query_text.index(f"1.0 + {match.start()} chars")
         end = query_text.index(f"1.0 + {match.end()} chars")
+        
+        # Replace with uppercase
+        query_text.delete(start, end)
+        query_text.insert(start, match.group().upper())
+        
         query_text.tag_add("keyword", start, end)
+    
+    # Refresh content after modifications
+    content = query_text.get("1.0", tk.END)
     
     strings = r"('([^'\\]|\\.)*'|\"([^\"\\]|\\.)*\")"
     for match in re.finditer(strings, content):
