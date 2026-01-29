@@ -6,7 +6,6 @@ import re  # for syntax highlighting
 
 # Import your custom modules
 from history import load_history, add_history_entry, clear_history, delete_history_entry, get_history
-from database import execute_query
 from snippets import (
     load_snippets,
     get_filtered_snippets,
@@ -18,6 +17,9 @@ from snippets import (
     move_snippet_down
 )
 from export import export_results
+
+# NEW: Import display helpers from database.py (we'll use them directly here)
+from database import create_scrollable_tree, autosize_treeview_columns
 
 # 1. HIGH-DPI AWARENESS
 try:
@@ -195,39 +197,126 @@ def run_current_query(event=None):
         is_running_query = False
         return
     
+    # Clear existing result tabs EXCEPT History
+    for tab_id in results_notebook.tabs():
+        tab_name = results_notebook.tab(tab_id, "text")
+        if tab_name != "History":
+            results_notebook.forget(tab_id)
+    
     try:
-        conn = pyodbc.connect(conn_str)
+        conn = pyodbc.connect(conn_str, autocommit=True)
         cursor = conn.cursor()
         cursor.execute(query)
         
-        if cursor.description is None:
-            rows_affected = cursor.rowcount if cursor.rowcount >= 0 else 0
-            result_info = f"{rows_affected} row(s) affected"
-            row_count = rows_affected
-            conn.commit()
-        else:
-            rows = cursor.fetchall()
-            result_info = f"{len(rows)} rows"
-            row_count = len(rows)
+        result_count = 0
+        has_any_result = False
+        row_count = 0  # Total rows for status bar
+        result_infos = []  # Collect info for history
+        
+        while True:
+            has_any_result = True
+            result_count += 1
+            
+            tab_frame = ttk.Frame(results_notebook)
+            
+            # ---------------- SELECT queries ----------------
+            if cursor.description:
+                cols = [column[0] for column in cursor.description]
+                results_notebook.add(tab_frame, text=f"Result {result_count}")
+                
+                tree = create_scrollable_tree(tab_frame, cols)
+                
+                for col in cols:
+                    tree.heading(col, text=col)
+                    tree.column(col, anchor="center", width=120)
+                
+                rows = cursor.fetchall()
+                result_infos.append(f"{len(rows)} rows")
+                row_count += len(rows)
+                
+                if rows:
+                    for i, row in enumerate(rows):
+                        values = ["" if val is None else str(val) for val in row]
+                        tag = "even" if i % 2 == 0 else "odd"
+                        tree.insert("", "end", values=values, tags=(tag,))
+                    autosize_treeview_columns(tree)
+                    
+                    tree.tag_configure("even", background="#f9f9f9")
+                    tree.tag_configure("odd", background="#ffffff")
+                else:
+                    tree.insert(
+                        "",
+                        "end",
+                        values=["(No rows returned)"] + [""] * (len(cols) - 1)
+                    )
+            
+            # ---------------- Non-SELECT queries ----------------
+            else:
+                affected = cursor.rowcount if cursor.rowcount >= 0 else "unknown"
+                result_infos.append(f"{affected} row(s) affected")
+                if affected != "unknown":
+                    row_count += affected
+                
+                results_notebook.add(tab_frame, text=f"Query {result_count}")
+                
+                tree = create_scrollable_tree(tab_frame, ("Message",))
+                tree.heading("Message", text="Execution Result")
+                tree.column("Message", anchor="w", width=600)
+                
+                tree.insert(
+                    "",
+                    "end",
+                    values=(f"Success: {affected} row(s) affected",)
+                )
+                autosize_treeview_columns(tree)
+            
+            if not cursor.nextset():
+                break
         
         cursor.close()
         conn.close()
         
+        if not has_any_result:
+            tab_frame = ttk.Frame(results_notebook)
+            results_notebook.add(tab_frame, text="Result")
+            
+            tree = create_scrollable_tree(tab_frame, ("Message",))
+            tree.heading("Message", text="Info")
+            tree.column("Message", anchor="w", width=600)
+            tree.insert("", "end", values=("Query executed successfully.",))
+            
+            result_infos.append("executed successfully")
+        
+        # Add to history (join infos if multiple results)
+        result_info = "; ".join(result_infos) if result_infos else "executed"
         execution_time = time.time() - start_time
         add_history_entry(query, "success", result_info)
         refresh_history_list()
         update_status_bar(f"Executed in {execution_time:.3f}s", row_count, "success")
-
-        execute_query(query, results_notebook, conn_str)
-        if results_notebook.index("end") > 0:
+        
+        # Select first result tab (index 0, since History is at the end)
+        if results_notebook.index("end") > 1:  # More than just History
             results_notebook.select(1)
 
+    # ---------------- Error handling ----------------
     except Exception as e:
         execution_time = time.time() - start_time
         add_history_entry(query, "error", str(e)[:100])
         refresh_history_list()
         update_status_bar(f"Error in {execution_time:.3f}s", 0, "error")
-        messagebox.showerror("Query Error", str(e))
+        
+        tab_frame = ttk.Frame(results_notebook)
+        results_notebook.add(tab_frame, text="Error")
+        
+        tree = create_scrollable_tree(tab_frame, ("Error",))
+        tree.heading("Error", text="SQL Error")
+        tree.column("Error", anchor="w", width=900)
+        
+        tree.insert("", "end", values=(str(e),))
+        autosize_treeview_columns(tree)
+        
+        results_notebook.select(tab_frame)  # Select the error tab
+    
     finally:
         is_running_query = False
 
@@ -441,11 +530,10 @@ def on_snippet_key_nav(event):
 
 def clear_all():
     query_text.delete("1.0", tk.END)
-    for tab in results_notebook.winfo_children():
-        tab_index = results_notebook.index(tab)
-        tab_name = results_notebook.tab(tab_index, "text")
+    for tab in results_notebook.tabs():
+        tab_name = results_notebook.tab(tab, "text")
         if tab_name != "History":
-            tab.destroy()
+            results_notebook.forget(tab)
 
     # Add empty placeholder tab
     empty_tab = ttk.Frame(results_notebook)
@@ -633,12 +721,12 @@ def change_database():
 root = tk.Tk()
 root.title("SQL Playground")
 root.state('zoomed')
-root.configure(bg="#f0f0f0")
+root.configure(bg="lightblue")
 
 style = ttk.Style()
 style.theme_use("alt")
 style.configure("Treeview", rowheight=25, font=("Segoe UI", 9))
-style.configure("Treeview.Heading", background="#e1e1e1", font=("Segoe UI", 9, "bold"))
+style.configure("Treeview.Heading", background="lightblue", font=("Segoe UI", 9, "bold"))
 
 root.grid_columnconfigure(0, weight=1)  # Left (main) expands
 root.grid_columnconfigure(1, weight=0)  # Right (snippets) fixed width
@@ -657,15 +745,15 @@ top_frame.grid_columnconfigure(0, weight=1)
 top_frame.grid_rowconfigure(1, weight=1)  # Query text expands
 
 # Title row with database info
-title_frame = tk.Frame(top_frame, bg="#f0f0f0")
+title_frame = tk.Frame(top_frame, bg="lightblue")
 title_frame.grid(row=0, column=0, sticky="w", pady=(0, 5))
 
-tk.Label(title_frame, text="SQL Query:", bg="#f0f0f0", font=("Arial", 10, "bold")).pack(side=tk.LEFT)
-db_label = tk.Label(title_frame, text=f"Database: {current_db}", bg="#f0f0f0", font=("Arial", 10, "italic"), fg="#2c3e50")
+tk.Label(title_frame, text="SQL Query:", bg="lightblue", font=("Arial", 10, "bold")).pack(side=tk.LEFT)
+db_label = tk.Label(title_frame, text=f"Database: {current_db}", bg="lightblue", font=("Arial", 10, "italic"), fg="#2c3e50")
 db_label.pack(side=tk.LEFT, padx=(20, 0))
 
 # Query editor with line numbers
-query_frame = tk.Frame(top_frame, bg="#f0f0f0")
+query_frame = tk.Frame(top_frame, bg="lightblue")
 query_frame.grid(row=1, column=0, sticky="nsew", pady=(0,10))
 query_frame.grid_rowconfigure(0, weight=1)
 query_frame.grid_columnconfigure(1, weight=1)
@@ -720,18 +808,18 @@ query_text.after(100, poll_line_numbers)
 line_numbers.redraw()
 
 # Buttons row
-btn_frame = tk.Frame(top_frame, bg="#f0f0f0")
+btn_frame = tk.Frame(top_frame, bg="lightblue")
 btn_frame.grid(row=2, column=0, sticky="ew", pady=(0,10))
 btn_frame.grid_columnconfigure(0, weight=1)
 
-left_btn_frame = tk.Frame(btn_frame, bg="#f0f0f0")
+left_btn_frame = tk.Frame(btn_frame, bg="lightblue")
 left_btn_frame.grid(row=0, column=0, sticky="w")
 
 tk.Button(left_btn_frame, text="Run Query", command=run_current_query, bg="#c0f405", width=15, cursor="hand2").pack(side=tk.LEFT, padx=2)
-tk.Button(left_btn_frame, text="Clear", command=clear_all, width=12, cursor="hand2").pack(side=tk.LEFT, padx=2)
-tk.Button(left_btn_frame, text="Save as Snippet", command=save_new_snippet_gui, width=15, cursor="hand2").pack(side=tk.LEFT, padx=2)
+tk.Button(left_btn_frame, text="Clear", bg="#9db1f3",command=clear_all, width=12, cursor="hand2").pack(side=tk.LEFT, padx=2)
+tk.Button(left_btn_frame, text="Save as Snippet", bg="#7391f3", command=save_new_snippet_gui, width=15, cursor="hand2").pack(side=tk.LEFT, padx=2)
 
-right_btn_frame = tk.Frame(btn_frame, bg="#f0f0f0")
+right_btn_frame = tk.Frame(btn_frame, bg="lightblue")
 right_btn_frame.grid(row=0, column=1, sticky="e")
 
 tk.Button(right_btn_frame, text="Copy Results", command=lambda: copy_treeview_to_clipboard(get_current_treeview()),
@@ -804,7 +892,7 @@ search_entry.pack(fill="x", padx=10, pady=5)
 search_entry.bind("<KeyRelease>", lambda e: refresh_snippet_list())
 
 # --- Snippet list with scrollbar ---
-snippet_container = tk.Frame(right_frame, bg="#e1e1e1")
+snippet_container = tk.Frame(right_frame, bg="#40138d")
 snippet_container.pack(fill="both", expand=True, padx=10, pady=5)
 
 snippet_scrollbar = tk.Scrollbar(snippet_container, orient="vertical")

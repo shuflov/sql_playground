@@ -37,12 +37,16 @@ def add_snippet(name, sql):
 
 def edit_snippet(old_name, new_name, new_sql):
     global current_snippets
+    # First try to find by exact old name
     for snippet in current_snippets:
         if snippet["name"] == old_name:
-            snippet["name"] = new_name
-            snippet["sql"] = new_sql
+            snippet["name"] = new_name.strip()
+            snippet["sql"] = new_sql.strip()
             save_snippets()
             return True
+    
+    # If not found — maybe name was changed or filter issue — try by index or warn
+    print(f"Warning: Could not find snippet named '{old_name}' to edit")
     return False
 
 def delete_snippet(name):
