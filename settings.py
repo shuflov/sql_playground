@@ -4,7 +4,7 @@ from tkinter import messagebox
 from config import load_config, save_config
 
 
-def open_settings(parent):
+def open_settings(parent, status_ai_label=None):
     config = load_config()
 
     dialog = tk.Toplevel(parent)
@@ -40,7 +40,12 @@ def open_settings(parent):
     def save():
         new_provider = provider_var.get()
         config["ai_provider"] = new_provider
-        save_config(config)                     # this must be called
+        save_config(config)
+        
+        # Add this check to prevent "AttributeError"
+        if status_ai_label:
+            status_ai_label.config(text=f"AI: {new_provider}")
+            
         messagebox.showinfo("Settings Saved",
                             f"AI provider set to {new_provider.capitalize()}.\n"
                             "Changes take effect after restart.")
