@@ -17,6 +17,8 @@ from snippets import (
     move_snippet_down
 )
 from export import export_results
+from debug_ai import debug_with_ai, update_ai_status
+from settings import open_settings
 
 # NEW: Import display helpers from database.py (we'll use them directly here)
 from database import create_scrollable_tree, autosize_treeview_columns
@@ -818,6 +820,8 @@ left_btn_frame.grid(row=0, column=0, sticky="w")
 tk.Button(left_btn_frame, text="Run Query", command=run_current_query, bg="#c0f405", width=15, cursor="hand2").pack(side=tk.LEFT, padx=2)
 tk.Button(left_btn_frame, text="Clear", bg="#9db1f3",command=clear_all, width=12, cursor="hand2").pack(side=tk.LEFT, padx=2)
 tk.Button(left_btn_frame, text="Save as Snippet", bg="#7391f3", command=save_new_snippet_gui, width=15, cursor="hand2").pack(side=tk.LEFT, padx=2)
+tk.Button(left_btn_frame, text="Debug with AI", bg="#b0dc11", command=lambda: debug_with_ai(query_text), width=15, cursor="hand2").pack(side=tk.LEFT, padx=2)
+
 
 right_btn_frame = tk.Frame(btn_frame, bg="lightblue")
 right_btn_frame.grid(row=0, column=1, sticky="e")
@@ -931,7 +935,7 @@ s_btn_frame.pack(fill="x", pady=10)
 # Change DB button — blue
 tk.Button(s_btn_frame, text="Change DB", command=change_database, width=12,
           bg="#4a90e2", fg="white", relief="raised", cursor="hand2").pack(side=tk.LEFT, padx=(10, 8))
-tk.Button(s_btn_frame, text="Settings", width=12,bg="#ebedf0", relief="raised", cursor="hand2").pack(side=tk.LEFT, padx=(0, 8))
+tk.Button(s_btn_frame, text="Settings", command=lambda: open_settings(root),width=12,bg="#ebedf0", relief="raised", cursor="hand2").pack(side=tk.LEFT, padx=(0, 8))
 
 # --- STATUS BAR at bottom ---
 status_bar = tk.Frame(root, bg="#2c3e50", height=30, relief="sunken", bd=1)
@@ -958,6 +962,20 @@ tk.Label(status_bar, text="|", bg="#2c3e50", fg="#7f8c8d", font=("Arial", 9)).pa
 status_db_label = tk.Label(status_bar, text=f"DB: {current_db}", bg="#2c3e50", fg="#3498db", 
                           font=("Arial", 9, "bold"), anchor="w")
 status_db_label.pack(side=tk.LEFT, padx=5)
+
+
+tk.Label(status_bar, text="|", bg="#2c3e50", fg="#7f8c8d", font=("Arial", 9)).pack(side=tk.LEFT, padx=5)
+# AI Model label
+global status_ai_label  # so we can update it later
+status_ai_label = tk.Label(
+    status_bar,
+    text=f"AI: groq",  # initial value
+    bg="#2c3e50",
+    fg="#00d4ff",     # nice cyan/blue for AI
+    font=("Arial", 9, "bold"),
+    anchor="w"
+)
+status_ai_label.pack(side=tk.LEFT, padx=5)
 
 # Separator
 tk.Label(status_bar, text="|", bg="#2c3e50", fg="#7f8c8d", font=("Arial", 9)).pack(side=tk.LEFT, padx=5)
