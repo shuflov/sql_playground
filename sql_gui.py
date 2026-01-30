@@ -935,7 +935,7 @@ s_btn_frame.pack(fill="x", pady=10)
 # Change DB button — blue
 tk.Button(s_btn_frame, text="Change DB", command=change_database, width=12,
           bg="#4a90e2", fg="white", relief="raised", cursor="hand2").pack(side=tk.LEFT, padx=(10, 8))
-tk.Button(s_btn_frame, text="Settings", command=lambda: open_settings(root),width=12,bg="#ebedf0", relief="raised", cursor="hand2").pack(side=tk.LEFT, padx=(0, 8))
+tk.Button(s_btn_frame, text="Settings", command=lambda: open_settings(root, status_ai_label),width=12,bg="#ebedf0", relief="raised", cursor="hand2").pack(side=tk.LEFT, padx=(0, 8))
 
 # --- STATUS BAR at bottom ---
 status_bar = tk.Frame(root, bg="#2c3e50", height=30, relief="sunken", bd=1)
