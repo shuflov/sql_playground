@@ -198,6 +198,13 @@ python sql_gui.py
 - `↑/↓` - Navigate snippets (when snippet list is focused)
 - `Enter` - Load selected snippet (when snippet list is focused)
 
+## 🤖 AI Assistant (Groq & Gemini)
+- **SQL Expert Mode**: Get instant explanations of complex queries.
+- **Code Optimization**: AI suggests performance improvements and best practices.
+- **Security Auditing**: Detects potential SQL injection or risky operations.
+- **Dual Provider Support**: Switch between **Groq** (insanely fast) and **Gemini 3** (deep reasoning) via settings.
+- **Visual Status**: Current active AI model is always visible in the status bar.
+
 ## 🐛 Troubleshooting
 
 ### Connection Issues:
@@ -229,6 +236,7 @@ python sql_gui.py
 The `.gitignore` file excludes:
 - `snippets.json` - Your personal saved queries
 - `history.json` - Your query execution history
+- `config.json` - Your API_KEY's for Gemini and Groq
 - `__pycache__/` - Python cache files
 
 This ensures your personal work stays private when using version control.
@@ -249,6 +257,10 @@ git commit -m "Initial commit"
 - **`snippets.json`** - Your saved queries (private, auto-generated)
 - **`history.json`** - Your query history (private, auto-generated)
 - **`snippets.example.json`** - Template with example SQL snippets
+- **`settings.py`** - GUI for selecting AI providers and managing configuration
+- **`debug_ai.py`** - Logic for communicating with Groq/Gemini and displaying SQL explanations
+- **`config.py`** - Helper functions to load and save `config.json`
+- **`config.json`** - Stores your active AI provider and API keys (Git-ignored)
 
 ## 📊 Recent Changes
 

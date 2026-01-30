@@ -20,10 +20,10 @@ from export import export_results
 from debug_ai import debug_with_ai, update_ai_status
 from settings import open_settings
 
-# NEW: Import display helpers from database.py (we'll use them directly here)
+# Import display helpers
 from database import create_scrollable_tree, autosize_treeview_columns
 
-# 1. HIGH-DPI AWARENESS
+# HIGH-DPI AWARENESS
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
 except Exception:
