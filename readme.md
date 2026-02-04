@@ -14,7 +14,7 @@ A powerful, offline/online SQL training application built with Python and Tkinte
 - **Syntax Highlighting**: SQL keywords, strings, and comments are color-coded in the editor
 - **Export Results**: Save query results to CSV or Excel with a friendly dialog
 - **Copy to Clipboard**: One-click copy of results, paste directly into Excel
-- **Fully Offline**: Everything runs locally — no cloud dependencies
+- **Offline/Online**: Everything runs locally with ollama model — no cloud dependencies, or with online AI models as well
 
 ### Snippets Management
 - **Drag & Drop Reordering**: Click and drag snippets to reorder them
@@ -202,11 +202,11 @@ python sql_gui.py
 - `↑/↓` - Navigate snippets (when snippet list is focused)
 - `Enter` - Load selected snippet (when snippet list is focused)
 
-## 🤖 AI Assistant (Groq & Gemini)
+## 🤖 AI Assistant (Groq & Gemini & local ollama model )
 - **SQL Expert Mode**: Get instant explanations of complex queries.
 - **Code Optimization**: AI suggests performance improvements and best practices.
 - **Security Auditing**: Detects potential SQL injection or risky operations.
-- **Dual Provider Support**: Switch between **Groq** (fast & inexpensive) and **Gemini** (Google) via the Settings dialog. The code currently uses a Gemini model string such as `gemini-2.5-flash-lite` in `debug_ai.py` (the exact model can be adjusted in the code).
+- **Provider Support**: Switch between **Groq** (fast & inexpensive) and **Gemini** (Google) or your own local **Ollama model** via the Settings dialog. The code currently uses a Gemini model string such as `gemini-2.5-flash-lite` in `debug_ai.py` (the exact model can be adjusted in the code).
 - **Visual Status**: The status bar includes an `AI:` label that shows the selected provider (initial value shown at app start).
 
 ### Known issue (status update)
