@@ -322,6 +322,39 @@ def run_current_query(event=None):
     finally:
         is_running_query = False
 
+def format_sql_keywords(sql):
+    """Return SQL with common SQL keywords uppercased, preserving literals/comments."""
+    if not sql:
+        return sql
+
+    # Common SQL keywords to uppercase
+    keywords = {
+        "select", "from", "where", "join", "inner", "left", "right", "outer",
+        "group", "by", "order", "having", "limit", "offset",
+        "insert", "update", "delete", "create", "drop",
+        "and", "or", "not"
+    }
+
+    formatted = []
+    i = 0
+    while i < len(sql):
+        char = sql[i]
+        if char.isalpha():
+            # Extract the word
+            word_start = i
+            while i < len(sql) and sql[i].isalnum() or sql[i] == '_':
+                i += 1
+            word = sql[word_start:i]
+            if word.lower() in keywords:
+                formatted.append(word.upper())
+            else:
+                formatted.append(word)
+        else:
+            formatted.append(char)
+            i += 1
+
+    return ''.join(formatted)
+
 
 def on_key_release(event):
     global is_running_query
