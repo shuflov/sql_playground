@@ -9,10 +9,10 @@ from google.genai import types # Correct way to import types for config
 from config import load_config
 from ollama_client import generate_from_ollama
 
-status_ai_label = None  # This will be set from sql_gui.py
+status_ai_label = None  # This will be set from main.py
 
 def set_status_label(label):
-    """Register the status label widget from `sql_gui.py` and update it immediately."""
+    """Register the status label widget from `main.py` and update it immediately."""
     global status_ai_label
     status_ai_label = label
     update_ai_status()
