@@ -10,12 +10,29 @@ from config import load_config
 
 status_ai_label = None  # This will be set from sql_gui.py
 
-def update_ai_status():
-    from config import load_config
-    config = load_config()
-    provider = config.get("ai_provider", "groq").capitalize()
-    status_ai_label.config(text=f"AI: {provider}")
+def set_status_label(label):
+    """Register the status label widget from `sql_gui.py` and update it immediately."""
+    global status_ai_label
+    status_ai_label = label
     update_ai_status()
+
+
+def update_ai_status(label=None):
+    """Update the `AI:` status label with the configured provider.
+
+    Behavior:
+    - If `label` is provided, update that label instance.
+    - Otherwise update the registered module-level `status_ai_label` if set.
+    """
+    try:
+        config = load_config()
+        provider = config.get("ai_provider", "groq").capitalize()
+        target = label or status_ai_label
+        if target:
+            target.config(text=f"AI: {provider}")
+    except Exception:
+        # Non-fatal: don't crash the app for status updates
+        pass
 
 def debug_with_ai(query_text_widget, parent_window=None):
     """

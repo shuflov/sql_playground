@@ -1,6 +1,6 @@
 # SQL Training App
 
-A powerful, offline SQL training application built with Python and Tkinter. Perfect for practicing SQL queries on your local Microsoft SQL Server database without needing the internet or complex tools.
+A powerful, offline/online SQL training application built with Python and Tkinter. Perfect for practicing SQL queries on your local Microsoft SQL Server database without needing the internet or complex tools.
 
 ## ✨ Features
 
@@ -44,22 +44,26 @@ A powerful, offline SQL training application built with Python and Tkinter. Perf
 ## 📁 Project Structure
 
 ```
+├── .env
+├── .git/
 ├── .gitignore
+├── .venv/
 ├── __pycache__/
-│   ├── export.cpython-314.pyc
-│   ├── database.cpython-314.pyc
-│   ├── history.cpython-314.pyc
-│   └── snippets.cpython-314.pyc
+├── config.json
+├── config.py
+├── database.py
+├── debug_ai.py
+├── export.py
+├── history.json
+├── history.py
+├── readme.md
+├── settings.py
+├── snippets.example.json
+├── snippets.json
+├── snippets.py
+├── sql_gui.py
+├── test.md
 ├── to_do_list.txt
-├── history.py              # Query history management
-├── history.json            # Stored query history (auto-generated)
-├── snippets.py             # Snippet management functions
-├── snippets.json           # Your saved queries (private, git-ignored)
-├── snippets.example.json   # Template with example snippets
-├── export.py               # CSV/Excel export functionality
-├── database.py             # Database connection and query execution
-├── readme.md               # This file
-└── sql_gui.py             # Main application
 ```
 
 ## 🔧 Requirements
@@ -202,8 +206,12 @@ python sql_gui.py
 - **SQL Expert Mode**: Get instant explanations of complex queries.
 - **Code Optimization**: AI suggests performance improvements and best practices.
 - **Security Auditing**: Detects potential SQL injection or risky operations.
-- **Dual Provider Support**: Switch between **Groq** (insanely fast) and **Gemini 3** (deep reasoning) via settings.
-- **Visual Status**: Current active AI model is always visible in the status bar.
+- **Dual Provider Support**: Switch between **Groq** (fast & inexpensive) and **Gemini** (Google) via the Settings dialog. The code currently uses a Gemini model string such as `gemini-2.5-flash-lite` in `debug_ai.py` (the exact model can be adjusted in the code).
+- **Visual Status**: The status bar includes an `AI:` label that shows the selected provider (initial value shown at app start).
+
+### Known issue (status update)
+
+- The `debug_ai.py` module contains an `update_ai_status()` implementation that calls itself recursively; this causes a crash if that function is invoked. The status label still shows the initial provider value from `sql_gui.py`, and changing the provider via Settings updates `config.json` — but automatic background updates using `update_ai_status()` are currently broken. This is documented here so you (or a future contributor) can safely fix the function in code.
 
 ## 🐛 Troubleshooting
 
