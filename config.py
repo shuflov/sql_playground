@@ -11,7 +11,8 @@ CONFIG_FILE = Path("config.json")
 DEFAULT_CONFIG = {
     "ai_provider": "groq",          # default to groq since you have the key
     "gemini_api_key": os.getenv("GEMINI_API_KEY"),
-    "groq_api_key": os.getenv("GROQ_API_KEY")
+    "groq_api_key": os.getenv("GROQ_API_KEY"),
+    "ollama_url": "http://localhost:11434"  # local Ollama instance
 }
 
 def load_config():
@@ -28,6 +29,7 @@ def load_config():
     # Ensure keys are strings or None
     config["gemini_api_key"] = config.get("gemini_api_key") or None
     config["groq_api_key"] = config.get("groq_api_key") or None
+    config["ollama_url"] = config.get("ollama_url") or "http://localhost:11434"
     
     return config
 

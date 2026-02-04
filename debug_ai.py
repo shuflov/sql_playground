@@ -7,6 +7,7 @@ from groq import Groq
 from google import genai
 from google.genai import types # Correct way to import types for config
 from config import load_config
+from ollama_client import generate_from_ollama
 
 status_ai_label = None  # This will be set from sql_gui.py
 
@@ -47,15 +48,16 @@ def debug_with_ai(query_text_widget, parent_window=None):
 
     config = load_config()
     provider = config.get("ai_provider", "groq").lower()
-    api_key = config.get(f"{provider}_api_key")
-
-
-    if not api_key:
-        messagebox.showerror("Missing API Key",
-                             f"No API key found for {provider.capitalize()}.\n"
-                             f"Please set GEMINI_API_KEY or GROQ_API_KEY in .env\n"
-                             "or use the Settings dialog.")
-        return
+    
+    # Only check API key for providers that require it
+    if provider != "ollama":
+        api_key = config.get(f"{provider}_api_key")
+        if not api_key:
+            messagebox.showerror("Missing API Key",
+                                 f"No API key found for {provider.capitalize()}.\n"
+                                 f"Please set GEMINI_API_KEY or GROQ_API_KEY in .env\n"
+                                 "or use the Settings dialog.")
+            return
 
     try:
         ai_answer = ""
@@ -85,6 +87,7 @@ def debug_with_ai(query_text_widget, parent_window=None):
             ai_answer = response.choices[0].message.content.strip()
 
         elif provider == "gemini":
+            api_key = config.get(f"{provider}_api_key")
             # Initialize the client
             client = genai.Client(api_key=api_key)
             # Define your prompt
@@ -107,6 +110,16 @@ def debug_with_ai(query_text_widget, parent_window=None):
             
             # Simplified response access
             ai_answer = response.text.strip()
+
+        elif provider == "ollama":
+            # Compose system prompt + user query
+            prompt_text = (
+                "You are an expert SQL Server developer. "
+                "Explain the query clearly, "
+                "keep your answer short..\n\n"
+                f"SQL query:\n```sql\n{query}\n```"
+            )
+            ai_answer = generate_from_ollama(prompt_text)
 
         else:
             messagebox.showerror("Invalid Provider", f"Unknown provider: {provider}")

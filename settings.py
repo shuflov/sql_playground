@@ -21,16 +21,20 @@ def open_settings(parent, status_ai_label=None):
 
     tk.Radiobutton(dialog, text="Groq (fast & cheap)", variable=provider_var, value="groq").pack(anchor="w", padx=40)
     tk.Radiobutton(dialog, text="Gemini (Google)", variable=provider_var, value="gemini").pack(anchor="w", padx=40)
+    tk.Radiobutton(dialog, text="Ollama (Local)", variable=provider_var, value="ollama").pack(anchor="w", padx=40)
 
     # Keys display (read-only for safety)
     tk.Label(dialog, text="Current API Keys (from .env):", font=("Arial", 10, "bold")).pack(pady=(20, 5))
 
     groq_key = config["groq_api_key"] or "Not set"
     gemini_key = config["gemini_api_key"] or "Not set"
+    ollama_url = config.get("ollama_url", "http://localhost:11434")
 
     tk.Label(dialog, text=f"Groq:   {groq_key[:10]}...{groq_key[-4:] if groq_key != 'Not set' else ''}",
              font=("Consolas", 10)).pack(anchor="w", padx=40)
     tk.Label(dialog, text=f"Gemini: {gemini_key[:10]}...{gemini_key[-4:] if gemini_key != 'Not set' else ''}",
+             font=("Consolas", 10)).pack(anchor="w", padx=40)
+    tk.Label(dialog, text=f"Ollama: {ollama_url}",
              font=("Consolas", 10)).pack(anchor="w", padx=40)
 
     # Buttons

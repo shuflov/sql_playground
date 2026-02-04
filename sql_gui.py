@@ -1010,6 +1010,10 @@ status_ai_label = tk.Label(
 )
 status_ai_label.pack(side=tk.LEFT, padx=5)
 
+# Initialize status label with actual configured provider
+from debug_ai import update_ai_status
+update_ai_status(status_ai_label)
+
 # Separator
 tk.Label(status_bar, text="|", bg="#2c3e50", fg="#7f8c8d", font=("Arial", 9)).pack(side=tk.LEFT, padx=5)
 
