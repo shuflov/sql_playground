@@ -67,7 +67,7 @@ A powerful, offline/online SQL training application built with Python and Tkinte
 ├── database.py (1200 tokens)
 ├── debug_ai.py (1600 tokens)
 ├── readme.md (2600 tokens)
-└── sql_gui.py (9100 tokens)
+└── main.py (9100 tokens)
 ```
 
 ## 🔧 Requirements
@@ -89,7 +89,7 @@ pip install pyodbc pandas openpyxl
 
 ### 2. Configure Database Connection
 
-The connection string is in `sql_gui.py` (around line 132):
+The connection string is in `main.py` (around line 132):
 
 ```python
 def get_conn_str(db_name):
@@ -135,7 +135,7 @@ GO
 ### 5. Run the Application
 
 ```bash
-python sql_gui.py
+python main.py
 ```
 
 ## 📖 Usage
@@ -215,7 +215,7 @@ python sql_gui.py
 
 ### Known issue (status update)
 
-- The `debug_ai.py` module contains an `update_ai_status()` implementation that calls itself recursively; this causes a crash if that function is invoked. The status label still shows the initial provider value from `sql_gui.py`, and changing the provider via Settings updates `config.json` — but automatic background updates using `update_ai_status()` are currently broken. This is documented here so you (or a future contributor) can safely fix the function in code.
+- The `debug_ai.py` module contains an `update_ai_status()` implementation that calls itself recursively; this causes a crash if that function is invoked. The status label still shows the initial provider value from `main.py`, and changing the provider via Settings updates `config.json` — but automatic background updates using `update_ai_status()` are currently broken. This is documented here so you (or a future contributor) can safely fix the function in code.
 
 ## 🐛 Troubleshooting
 
@@ -239,7 +239,7 @@ python sql_gui.py
 
 ### History Not Showing:
 
-- Check that `history.py` is in the same directory as `sql_gui.py`
+- Check that `history.py` is in the same directory as `main.py`
 - Ensure `history.json` is not corrupted (delete it to reset)
 - Verify queries are actually executing (check for error messages)
 
@@ -255,13 +255,13 @@ This ensures your personal work stays private when using version control.
 
 ```bash
 git init
-git add sql_gui.py database.py snippets.py history.py export.py README.md snippets.example.json .gitignore
+git add main.py database.py snippets.py history.py export.py README.md snippets.example.json .gitignore
 git commit -m "Initial commit"
 ```
 
 ## 📝 Files Explained
 
-- **`sql_gui.py`** - Main application with GUI, event handlers, and layout
+- **`main.py`** - Main application with GUI, event handlers, and layout
 - **`database.py`** - Database connection and query execution logic
 - **`snippets.py`** - Functions for loading, saving, and managing snippets
 - **`history.py`** - Functions for tracking and managing query history
