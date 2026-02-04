@@ -45,25 +45,29 @@ A powerful, offline/online SQL training application built with Python and Tkinte
 
 ```
 ├── .env
-├── .git/
 ├── .gitignore
-├── .venv/
-├── __pycache__/
-├── config.json
-├── config.py
-├── database.py
-├── debug_ai.py
-├── export.py
-├── history.json
-├── history.py
-├── readme.md
-├── settings.py
-├── snippets.example.json
-├── snippets.json
-├── snippets.py
-├── sql_gui.py
-├── test.md
-├── to_do_list.txt
+├── __pycache__/ (800 tokens)
+    ├── config.cpython-314.pyc
+    ├── export.cpython-314.pyc
+    ├── database.cpython-314.pyc
+    ├── debug_ai.cpython-314.pyc
+    ├── history.cpython-314.pyc
+    ├── settings.cpython-314.pyc
+    ├── snippets.cpython-314.pyc
+    └── ollama_client.cpython-314.pyc
+├── to_do_list.txt (300 tokens)
+├── config.py (300 tokens)
+├── history.py (500 tokens)
+├── ollama_client.py (500 tokens)
+├── settings.py (600 tokens)
+├── snippets.py (600 tokens)
+├── snippets.example.json (800 tokens)
+├── export.py (900 tokens)
+├── test.md (1100 tokens)
+├── database.py (1200 tokens)
+├── debug_ai.py (1600 tokens)
+├── readme.md (2600 tokens)
+└── sql_gui.py (9100 tokens)
 ```
 
 ## 🔧 Requirements
