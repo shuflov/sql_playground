@@ -149,8 +149,8 @@ python sql_gui.py
 
 **Button layout:**
 ```
-[ Run Query ] [ Clear ] [ Save as Snippet ]     [ Copy Results ] [ Export Results ]
-                                                    [ Change DB ]
+[ Run Query ] [ Clear ] [ Save as Snippet ] [ Debug with AI ]     [ Copy Results ] [ Export Results ]
+                                                    [ Change DB ] [ Settings ]
 ```
 
 ### Managing Snippets
