@@ -9,7 +9,6 @@ from history import load_history, add_history_entry, clear_history, delete_histo
 from snippets import (
     load_snippets,
     get_filtered_snippets,
-    add_snippet,
     edit_snippet,
     delete_snippet,
     save_current_as_snippet,
