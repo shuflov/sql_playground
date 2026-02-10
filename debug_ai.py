@@ -5,9 +5,10 @@ from tkinter import scrolledtext, messagebox
 
 from groq import Groq
 from google import genai
-from google.genai import types # Correct way to import types for config
+from google.genai import types
 from config import load_config
 from ollama_client import generate_from_ollama
+from markdown_renderer import apply_markdown
 
 status_ai_label = None  # This will be set from main.py
 
@@ -134,25 +135,29 @@ def debug_with_ai(query_text_widget, parent_window=None):
         popup.grab_set()
 
         # Header
+        header_frame = tk.Frame(popup)
+        header_frame.pack(fill="x", padx=12, pady=(12, 5))
+        
         tk.Label(
-            popup,
+            header_frame,
             text=f"AI Response from {provider.capitalize()}",
             font=("Arial", 13, "bold"),
-            pady=8
-        ).pack()
+            fg="#2c3e50"
+        ).pack(side="left")
 
         # Main text area
         text_area = scrolledtext.ScrolledText(
             popup,
             wrap=tk.WORD,
-            font=("Consolas", 11),
-            bg="#fdfdfd",
+            font=("Arial", 11),
+            bg="#ffffff",
             fg="#1a1a1a",
             padx=12, pady=12
         )
         text_area.pack(fill="both", expand=True, padx=12, pady=(0, 10))
 
-        text_area.insert(tk.END, ai_answer)
+        # Apply markdown formatting to the AI response
+        apply_markdown(text_area, ai_answer)
         text_area.config(state="disabled")
 
         # Buttons
