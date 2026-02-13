@@ -16,7 +16,7 @@ from snippets import (
     move_snippet_down
 )
 from export import export_results
-from debug_ai import debug_with_ai, update_ai_status
+from debug_ai import show_ai_options_window, update_ai_status
 from settings import open_settings
 
 # Import display helpers
@@ -852,7 +852,7 @@ left_btn_frame.grid(row=0, column=0, sticky="w")
 tk.Button(left_btn_frame, text="Run Query", command=run_current_query, bg="#c0f405", width=15, cursor="hand2").pack(side=tk.LEFT, padx=2)
 tk.Button(left_btn_frame, text="Clear", bg="#9db1f3",command=clear_all, width=12, cursor="hand2").pack(side=tk.LEFT, padx=2)
 tk.Button(left_btn_frame, text="Save as Snippet", bg="#7391f3", command=save_new_snippet_gui, width=15, cursor="hand2").pack(side=tk.LEFT, padx=2)
-tk.Button(left_btn_frame, text="Debug with AI", bg="#b0dc11", command=lambda: debug_with_ai(query_text), width=15, cursor="hand2").pack(side=tk.LEFT, padx=2)
+tk.Button(left_btn_frame, text="Play with AI", bg="#b0dc11", command=lambda: show_ai_options_window(query_text, results_notebook), width=15, cursor="hand2").pack(side=tk.LEFT, padx=2)
 
 
 right_btn_frame = tk.Frame(btn_frame, bg="lightblue")
