@@ -762,14 +762,17 @@ style.theme_use("alt")
 style.configure("Treeview", rowheight=25, font=("Segoe UI", 9))
 style.configure("Treeview.Heading", background="lightblue", font=("Segoe UI", 9, "bold"))
 
-root.grid_columnconfigure(0, weight=1)  # Left (main) expands
-root.grid_columnconfigure(1, weight=0)  # Right (snippets) fixed width
+root.grid_columnconfigure(0, weight=1)  # PanedWindow expands
 root.grid_rowconfigure(0, weight=1)
 root.grid_rowconfigure(1, weight=0)  # line for status bar
 
-# --- LEFT SIDE: Use PanedWindow for resizable split ---
-left_pane = ttk.PanedWindow(root, orient=tk.VERTICAL)
-left_pane.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+# --- Main PanedWindow: Horizontal split between left (query/results) and right (snippets) ---
+main_pane = ttk.PanedWindow(root, orient=tk.HORIZONTAL)
+main_pane.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+
+# Left side: Vertical PanedWindow for query + results
+left_pane = ttk.PanedWindow(main_pane, orient=tk.VERTICAL)
+main_pane.add(left_pane, weight=1)  # weight allows it to shrink/grow
 
 # Top pane: Query editor + buttons
 top_frame = tk.Frame(left_pane, bg="#f0f0f0")
@@ -917,9 +920,9 @@ history_tree.bind("<Double-1>", on_history_double_click)
 history_tree.bind("<Button-3>", show_history_context_menu)
 
 # --- RIGHT SIDE (Snippets) ---
-right_frame = tk.Frame(root, width=300, bg="#e1e1e1", relief="sunken", bd=1)
+right_frame = tk.Frame(main_pane, width=300, bg="#e1e1e1", relief="sunken", bd=1)
 right_frame.grid_propagate(False)
-right_frame.grid(row=0, column=1, sticky="nsew", padx=(5,10), pady=10)
+main_pane.add(right_frame, weight=0)  # weight=0 means snippets start at fixed width but can be resized
 
 tk.Label(right_frame, text="Snippets", bg="#e1e1e1", font=("Arial", 11, "bold")).pack(pady=10)
 
