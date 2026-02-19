@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import scrolledtext, messagebox, simpledialog, ttk
 import ctypes
 import re  # for syntax highlighting
+import webbrowser
 
 # Import your custom modules
 from history import load_history, add_history_entry, clear_history, delete_history_entry, get_history
@@ -750,6 +751,10 @@ def change_database():
         messagebox.showinfo("Database Changed", f"Now connected to: {current_db}")
         clear_all()  # Clear results
 
+def open_web_db():
+    """Open the web database interface in the default browser"""
+    webbrowser.open("https://shuflov.github.io/database/")
+
 # ------------------- Main GUI Setup -------------------
 
 root = tk.Tk()
@@ -866,6 +871,9 @@ tk.Button(right_btn_frame, text="Copy Results", command=lambda: copy_treeview_to
 
 tk.Button(right_btn_frame, text="Export Results", command=lambda: export_results(get_current_treeview()),
           width=15, bg="#2ecc71", fg="white", cursor="hand2").pack(side=tk.LEFT)
+
+tk.Button(right_btn_frame, text="Web DB", command=open_web_db,
+          width=10, bg="#3498db", fg="white", cursor="hand2").pack(side=tk.LEFT, padx=(8, 0))
 
 # Bottom pane: Results notebook
 results_notebook = ttk.Notebook(left_pane)
