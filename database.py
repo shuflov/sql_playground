@@ -131,7 +131,12 @@ def execute_query(query, results_notebook, conn_str, db_type="sqlserver"):
                 )
                 autosize_treeview_columns(tree)
 
-            if not cursor.nextset():
+            # nextset() is not supported by SQLite
+            try:
+                if not cursor.nextset():
+                    break
+            except AttributeError:
+                # SQLite doesn't support nextset()
                 break
 
         cursor.close()

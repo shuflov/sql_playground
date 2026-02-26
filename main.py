@@ -171,6 +171,7 @@ def refresh_snippet_list():
 current_db = "test"  # default
 db_type = "sqlserver"  # "sqlserver" or "sqlite"
 sqlite_db_path = ""  # Path to SQLite database file
+_is_setting_provider = False  # Flag to prevent recursive callback
 
 def get_conn_str(db_name, database_type="sqlserver"):
     if database_type == "sqlite":
@@ -278,7 +279,12 @@ def run_current_query(event=None):
                 )
                 autosize_treeview_columns(tree)
             
-            if not cursor.nextset():
+            # nextset() is not supported by SQLite
+            try:
+                if not cursor.nextset():
+                    break
+            except AttributeError:
+                # SQLite doesn't support nextset()
                 break
         
         cursor.close()
@@ -703,40 +709,15 @@ def schedule_highlight(event=None):
     query_text.after(200, highlight_sql)
 
 def change_database():
-    global conn_str, current_db, db_label, db_type, sqlite_db_path
-    
-    dialog = tk.Toplevel(root)
-    dialog.title("Select Database Type")
-    dialog.geometry("300x150")
-    dialog.transient(root)
-    dialog.grab_set()
-    
-    tk.Label(dialog, text="Choose database type:", font=("Arial", 11, "bold")).pack(pady=(20, 10))
-    
-    db_type_var = tk.StringVar(value=db_type)
-    
-    frame = tk.Frame(dialog)
-    frame.pack(pady=10)
-    
-    selected_type = [None]
+    """Open database selection dialog for current provider"""
+    global db_type
+    select_database_for_provider(db_type)
 
-    def on_select(chosen):
-        selected_type[0] = chosen
-        dialog.destroy()
-
-    tk.Button(frame, text="SQL Server", width=14, bg="#4a90e2", fg="white",
-              command=lambda: on_select("sqlserver")).pack(side=tk.LEFT, padx=10)
-    tk.Button(frame, text="SQLite", width=14, bg="#27ae60", fg="white",
-              command=lambda: on_select("sqlite")).pack(side=tk.LEFT, padx=10)
-
-    dialog.wait_window()
+def select_database_for_provider(provider):
+    """Select database for a given provider and update UI"""
+    global conn_str, current_db, db_type, sqlite_db_path, db_provider_var, _is_setting_provider
     
-    if not selected_type[0]:
-        return
-    
-    new_db_type = selected_type[0]
-    
-    if new_db_type == "sqlite":
+    if provider == "sqlite":
         from tkinter import filedialog
         file_path = filedialog.askopenfilename(
             title="Select SQLite Database",
@@ -746,6 +727,10 @@ def change_database():
             ]
         )
         if not file_path:
+            # User cancelled, restore previous selection
+            _is_setting_provider = True
+            db_provider_var.set(db_type)
+            _is_setting_provider = False
             return
         
         sqlite_db_path = file_path
@@ -757,29 +742,36 @@ def change_database():
         short = os.path.basename(file_path)
         root.title(f"SQL Playground - SQLite: {short}")
         db_label.config(text=f"Database: SQLite ({short})")
-        status_db_label.config(text=f"DB: {short}")
+        status_db_label.config(text=f"DB: SQLite")
 
         # *** Notify the SQLite Explorer ***
         sqlite_explorer.set_database(file_path)
         # Switch right panel to the Explorer tab
         right_notebook.select(explorer_tab)
 
-    else:
+    else:  # sqlserver
         new_db = simpledialog.askstring("Change Database", "Enter database name:", initialvalue=current_db)
-        if new_db and new_db.strip():
-            current_db = new_db.strip()
-            db_type = "sqlserver"
-            conn_str = get_conn_str(current_db, db_type)
-            root.title(f"SQL Training Tool - Database: {current_db}")
-            db_label.config(text=f"Database: {current_db}")
-            messagebox.showinfo("Database Changed", f"Now connected to: {current_db}")
-            # Clear the explorer when switching to SQL Server
-            sqlite_explorer.clear()
-            clear_all()
+        if not new_db or not new_db.strip():
+            # User cancelled, restore previous selection
+            _is_setting_provider = True
+            db_provider_var.set(db_type)
+            _is_setting_provider = False
             return
-        else:
-            return
+        
+        current_db = new_db.strip()
+        db_type = "sqlserver"
+        conn_str = get_conn_str(current_db, db_type)
+        root.title(f"SQL Training Tool - Database: {current_db}")
+        db_label.config(text=f"Database: {current_db}")
+        status_db_label.config(text=f"DB: {current_db}")
+        # Clear the explorer when switching to SQL Server
+        sqlite_explorer.clear()
+        clear_all()
     
+    # Update the radio button to reflect actual state
+    _is_setting_provider = True
+    db_provider_var.set(db_type)
+    _is_setting_provider = False
     messagebox.showinfo("Database Changed", f"Now connected to: {db_type.upper()}")
     clear_all()
 
@@ -1016,6 +1008,42 @@ sqlite_explorer = SQLiteExplorer(
 status_bar = tk.Frame(root, bg="#2c3e50", height=30, relief="sunken", bd=1)
 status_bar.grid(row=1, column=0, columnspan=2, sticky="ew")
 status_bar.grid_propagate(False)
+
+# --- Database Provider Selection (Radio Buttons) ---
+db_provider_frame = tk.Frame(status_bar, bg="#2c3e50")
+db_provider_frame.pack(side=tk.LEFT, padx=(5, 10))
+
+tk.Label(db_provider_frame, text="DB:", bg="#2c3e50", fg="#7f8c8d", 
+         font=("Arial", 9), anchor="w").pack(side=tk.LEFT, padx=(5, 2))
+
+db_provider_var = tk.StringVar(value=db_type)
+
+# Flag to prevent recursive callback when programmatically setting value
+_is_setting_provider = False
+
+def on_provider_change(*args):
+    """Handle database provider change - trigger database selection"""
+    global _is_setting_provider
+    if _is_setting_provider:
+        return
+    new_provider = db_provider_var.get()
+    if new_provider != db_type:
+        # Provider changed, now select the database
+        select_database_for_provider(new_provider)
+
+db_provider_var.trace_add("write", on_provider_change)
+
+tk.Radiobutton(db_provider_frame, text="SQLite", variable=db_provider_var, value="sqlite",
+               bg="#2c3e50", fg="#27ae60", selectcolor="#2c3e50", font=("Arial", 9),
+               activebackground="#2c3e50", activeforeground="#27ae60",
+               cursor="hand2").pack(side=tk.LEFT, padx=2)
+
+tk.Radiobutton(db_provider_frame, text="MS SQL", variable=db_provider_var, value="sqlserver",
+               bg="#2c3e50", fg="#4a90e2", selectcolor="#2c3e50", font=("Arial", 9),
+               activebackground="#2c3e50", activeforeground="#4a90e2",
+               cursor="hand2").pack(side=tk.LEFT, padx=2)
+
+tk.Label(status_bar, text="|", bg="#2c3e50", fg="#7f8c8d", font=("Arial", 9)).pack(side=tk.LEFT, padx=5)
 
 status_exec_label = tk.Label(status_bar, text="Ready", bg="#2c3e50", fg="white", 
                              font=("Arial", 9), anchor="w", padx=10)
