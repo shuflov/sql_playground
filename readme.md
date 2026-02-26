@@ -15,6 +15,7 @@ A powerful, offline/online SQL training application built with Python and Tkinte
 - **Export Results**: Save query results to CSV or Excel with a friendly dialog
 - **Copy to Clipboard**: One-click copy of results, paste directly into Excel
 - **Offline/Online**: Everything runs locally with ollama model — no cloud dependencies, or with online AI models as well
+- **Dual Database Support**: Switch between Microsoft SQL Server and SQLite databases seamlessly
 
 ### Snippets Management
 - **Drag & Drop Reordering**: Click and drag snippets to reorder them
@@ -41,39 +42,45 @@ A powerful, offline/online SQL training application built with Python and Tkinte
 - **Change Database**: Click the "Change DB" button to switch databases on the fly
 - **Dynamic Connection**: Database name shown in the title and updates in real-time
 
+### SQLite Explorer
+- **Tree View Browser**: Explore SQLite database schema in a hierarchical tree
+- **Tables, Views, & Indexes**: See all database objects organized by type
+- **Column Details**: Expand any table to see columns, types, NULL settings, defaults, and primary keys
+- **Quick Queries**: Double-click a table to auto-generate a SELECT query (100 rows)
+- **Context Menu**: Right-click for SELECT COUNT, SHOW CREATE, and other quick actions
+- **Filter/Search**: Type in the search box to filter tables by name
+- **Auto-Refresh**: Click the refresh button (⟳) to reload schema after changes
+
 ## 📁 Project Structure
 
 ```
 ├── .env
 ├── .gitignore
-├── __pycache__/ (800 tokens)
-    ├── config.cpython-314.pyc
-    ├── export.cpython-314.pyc
-    ├── database.cpython-314.pyc
-    ├── debug_ai.cpython-314.pyc
-    ├── history.cpython-314.pyc
-    ├── settings.cpython-314.pyc
-    ├── snippets.cpython-314.pyc
-    └── ollama_client.cpython-314.pyc
-├── to_do_list.txt (300 tokens)
-├── config.py (300 tokens)
-├── history.py (500 tokens)
-├── ollama_client.py (500 tokens)
-├── settings.py (600 tokens)
-├── snippets.py (600 tokens)
-├── snippets.example.json (800 tokens)
-├── export.py (900 tokens)
-├── test.md (1100 tokens)
-├── database.py (1200 tokens)
-├── debug_ai.py (1600 tokens)
+├── __pycache__/
+├── SQLiteExplorer.py
+├── config.py
+├── config.json
+├── database.py
+├── debug_ai.py
+├── export.py
+├── history.py
+├── history.json
+├── main.py
+├── ollama_client.py
+├── settings.py
+├── snippets.py
+├── snippets.json
+├── snippets.example.json
+└── readme.md
+```
 ├── readme.md (2600 tokens)
 └── main.py (9100 tokens)
 ```
 
 ## 🔧 Requirements
 
-- **Python 3.7+**
-- **Microsoft SQL Server** (tested with SQL Server Express)
+- **Python 3.7+** (SQLite support is built-in, no extra package needed)
+- **Microsoft SQL Server** (tested with SQL Server Express) — only if using SQL Server mode
 - **Required packages**:
   ```bash
   pip install pyodbc pandas openpyxl
@@ -199,6 +206,33 @@ python main.py
 3. App reconnects and updates the title
 4. Previous results are cleared
 
+### Using SQLite
+
+The app supports both Microsoft SQL Server and SQLite databases.
+
+**Switching to SQLite:**
+1. Click the **Settings** button (gear icon) in the right panel
+2. Select **SQLite** radio button in the "Database Provider" section
+3. Click **Browse** to select a `.db`, `.sqlite`, or `.sqlite3` file
+4. Click **Save** — the app will reconnect using SQLite
+
+**SQLite Explorer Panel:**
+- Located in the right panel (second tab below Snippets)
+- Shows a tree with Tables, Views, and Indexes
+- Click the arrow ▶ to expand a table and see its columns
+- **Double-click** any table to load `SELECT * FROM table LIMIT 100;` into the editor
+- **Right-click** a table for quick actions:
+  - SELECT * FROM table (100 rows)
+  - SELECT COUNT(*) FROM table
+  - Show CREATE statement
+- Use the **search box** to filter tables by name
+- Click **⟳** to refresh the schema
+
+**Switching back to SQL Server:**
+1. Open Settings
+2. Select **SQL Server** radio button
+3. Click **Change DB** to select a different SQL Server database
+
 ## ⌨️ Keyboard Shortcuts
 
 - `Ctrl+Enter` - Run current query
@@ -262,21 +296,28 @@ git commit -m "Initial commit"
 ## 📝 Files Explained
 
 - **`main.py`** - Main application with GUI, event handlers, and layout
-- **`database.py`** - Database connection and query execution logic
+- **`database.py`** - Database connection and query execution logic (supports SQL Server and SQLite)
 - **`snippets.py`** - Functions for loading, saving, and managing snippets
 - **`history.py`** - Functions for tracking and managing query history
 - **`export.py`** - CSV and Excel export functionality
 - **`snippets.json`** - Your saved queries (private, auto-generated)
 - **`history.json`** - Your query history (private, auto-generated)
-- **`snippets.example.json`** - Template with example SQL snippets
-- **`settings.py`** - GUI for selecting AI providers and managing configuration
+- **`snippets_example.json`** - Template with example SQL snippets
+- **`settings.py`** - GUI for selecting AI providers and database type
 - **`debug_ai.py`** - Logic for communicating with Groq/Gemini and displaying SQL explanations
 - **`config.py`** - Helper functions to load and save `config.json`
-- **`config.json`** - Stores your active AI provider and API keys (Git-ignored)
+- **`config.json`** - Stores your active AI provider, API keys, and database settings (Git-ignored)
+- **`SQLiteExplorer.py`** - Tree-based SQLite schema browser panel
 
 ## 📊 Recent Changes
 
 ### Latest Updates:
+✅ SQLite support — work with local .db/.sqlite files
+✅ SQLite Explorer panel — tree view of tables, views, indexes, and columns
+✅ Dual database mode — switch between SQL Server and SQLite via Settings
+✅ Quick query generation — double-click tables in explorer to auto-generate SELECT
+✅ Context menu actions — right-click tables for COUNT, CREATE statement, etc.
+✅ Filter/search in explorer — quickly find tables by name
 ✅ Query history tracking with timestamp and results
 ✅ Drag & drop snippet reordering
 ✅ Right-click context menus for snippets and history
