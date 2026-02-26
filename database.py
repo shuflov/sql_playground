@@ -1,4 +1,5 @@
 import pyodbc
+import sqlite3
 from tkinter import messagebox, ttk
 import tkinter as tk
 import tkinter.font as tkfont
@@ -50,7 +51,7 @@ def create_scrollable_tree(parent, columns):
 
     return tree
 
-def execute_query(query, results_notebook, conn_str):
+def execute_query(query, results_notebook, conn_str, db_type="sqlserver"):
     if not query.strip():
         messagebox.showwarning("Warning", "Enter a query first!")
         return
@@ -62,7 +63,12 @@ def execute_query(query, results_notebook, conn_str):
         if tab_name != "History":
             tab.destroy()
     try:
-        conn = pyodbc.connect(conn_str, autocommit=True)
+        # Connect based on database type
+        if db_type == "sqlite":
+            conn = sqlite3.connect(conn_str)
+            conn.row_factory = sqlite3.Row
+        else:
+            conn = pyodbc.connect(conn_str, autocommit=True)
         cursor = conn.cursor()
 
         cursor.execute(query)
@@ -78,7 +84,11 @@ def execute_query(query, results_notebook, conn_str):
 
             # ---------------- SELECT queries ----------------
             if cursor.description:
-                cols = [column[0] for column in cursor.description]
+                # For SQLite, cursor.description format is different
+                if db_type == "sqlite":
+                    cols = [description[0] for description in cursor.description]
+                else:
+                    cols = [column[0] for column in cursor.description]
                 results_notebook.add(tab_frame, text=f"Result {result_count}")
 
                 tree = create_scrollable_tree(tab_frame, cols)
@@ -125,6 +135,8 @@ def execute_query(query, results_notebook, conn_str):
                 break
 
         cursor.close()
+        if db_type == "sqlite":
+            conn.commit()
         conn.close()
 
         if not has_any_result:

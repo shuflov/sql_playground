@@ -1,4 +1,5 @@
 import pyodbc
+import sqlite3
 import tkinter as tk
 from tkinter import scrolledtext, messagebox, simpledialog, ttk
 import ctypes
@@ -22,6 +23,10 @@ from settings import open_settings
 
 # Import display helpers
 from database import create_scrollable_tree, autosize_treeview_columns
+
+# *** NEW: Import the SQLite Explorer ***
+from SQLiteExplorer import SQLiteExplorer
+
 
 # HIGH-DPI AWARENESS
 try:
@@ -120,18 +125,14 @@ class TextLineNumbers(tk.Canvas):
         """Redraw line numbers"""
         self.delete("all")
         
-        # Get the number of lines in the text widget
         i = self.text_widget.index("@0,0")
         start_line = int(i.split('.')[0])
         
-        # Get the last visible line
         last_visible = self.text_widget.index("@0,%d" % self.text_widget.winfo_height())
         end_line = int(last_visible.split('.')[0])
         
-        # Draw line numbers for visible lines
         for line_num in range(start_line, end_line + 1):
             try:
-                # Get the y coordinate of this line
                 line_index = f"{line_num}.0"
                 bbox = self.text_widget.bbox(line_index)
                 if bbox:
@@ -140,8 +141,6 @@ class TextLineNumbers(tk.Canvas):
                                    font=("Consolas", 11), fill="#999999")
             except:
                 break
-
-# ... existing imports and DPI settings ...
 
 
 def on_scroll(*args):
@@ -170,8 +169,12 @@ def refresh_snippet_list():
 
 # Dynamic connection string
 current_db = "test"  # default
+db_type = "sqlserver"  # "sqlserver" or "sqlite"
+sqlite_db_path = ""  # Path to SQLite database file
 
-def get_conn_str(db_name):
+def get_conn_str(db_name, database_type="sqlserver"):
+    if database_type == "sqlite":
+        return db_name
     return (
         "DRIVER={ODBC Driver 18 for SQL Server};"
         "SERVER=localhost\\SQLEXPRESS;"
@@ -181,12 +184,11 @@ def get_conn_str(db_name):
         "TrustServerCertificate=yes;"
     )
 
-conn_str = get_conn_str(current_db)
+conn_str = get_conn_str(current_db, db_type)
 
-# ... existing imports and DPI settings ...
+current_db = "test"
+is_running_query = False
 
-current_db = "test"  # existing line
-is_running_query = False  # <--- ADD THIS LINE HERE
 def run_current_query(event=None):
     global is_running_query
     is_running_query = True
@@ -199,21 +201,24 @@ def run_current_query(event=None):
         is_running_query = False
         return
     
-    # Clear existing result tabs EXCEPT History
     for tab_id in results_notebook.tabs():
         tab_name = results_notebook.tab(tab_id, "text")
         if tab_name != "History":
             results_notebook.forget(tab_id)
     
     try:
-        conn = pyodbc.connect(conn_str, autocommit=True)
+        if db_type == "sqlite":
+            conn = sqlite3.connect(conn_str)
+            conn.row_factory = sqlite3.Row
+        else:
+            conn = pyodbc.connect(conn_str, autocommit=True)
         cursor = conn.cursor()
         cursor.execute(query)
         
         result_count = 0
         has_any_result = False
-        row_count = 0  # Total rows for status bar
-        result_infos = []  # Collect info for history
+        row_count = 0
+        result_infos = []
         
         while True:
             has_any_result = True
@@ -221,9 +226,11 @@ def run_current_query(event=None):
             
             tab_frame = ttk.Frame(results_notebook)
             
-            # ---------------- SELECT queries ----------------
             if cursor.description:
-                cols = [column[0] for column in cursor.description]
+                if db_type == "sqlite":
+                    cols = [description[0] for description in cursor.description]
+                else:
+                    cols = [column[0] for column in cursor.description]
                 results_notebook.add(tab_frame, text=f"Result {result_count}")
                 
                 tree = create_scrollable_tree(tab_frame, cols)
@@ -252,7 +259,6 @@ def run_current_query(event=None):
                         values=["(No rows returned)"] + [""] * (len(cols) - 1)
                     )
             
-            # ---------------- Non-SELECT queries ----------------
             else:
                 affected = cursor.rowcount if cursor.rowcount >= 0 else "unknown"
                 result_infos.append(f"{affected} row(s) affected")
@@ -276,6 +282,8 @@ def run_current_query(event=None):
                 break
         
         cursor.close()
+        if db_type == "sqlite":
+            conn.commit()
         conn.close()
         
         if not has_any_result:
@@ -289,18 +297,15 @@ def run_current_query(event=None):
             
             result_infos.append("executed successfully")
         
-        # Add to history (join infos if multiple results)
         result_info = "; ".join(result_infos) if result_infos else "executed"
         execution_time = time.time() - start_time
         add_history_entry(query, "success", result_info)
         refresh_history_list()
         update_status_bar(f"Executed in {execution_time:.3f}s", row_count, "success")
         
-        # Select first result tab (index 0, since History is at the end)
-        if results_notebook.index("end") > 1:  # More than just History
+        if results_notebook.index("end") > 1:
             results_notebook.select(1)
 
-    # ---------------- Error handling ----------------
     except Exception as e:
         execution_time = time.time() - start_time
         add_history_entry(query, "error", str(e)[:100])
@@ -317,17 +322,15 @@ def run_current_query(event=None):
         tree.insert("", "end", values=(str(e),))
         autosize_treeview_columns(tree)
         
-        results_notebook.select(tab_frame)  # Select the error tab
+        results_notebook.select(tab_frame)
     
     finally:
         is_running_query = False
 
 def format_sql_keywords(sql):
-    """Return SQL with common SQL keywords uppercased, preserving literals/comments."""
     if not sql:
         return sql
 
-    # Common SQL keywords to uppercase
     keywords = {
         "select", "from", "where", "join", "inner", "left", "right", "outer",
         "group", "by", "order", "having", "limit", "offset",
@@ -340,7 +343,6 @@ def format_sql_keywords(sql):
     while i < len(sql):
         char = sql[i]
         if char.isalpha():
-            # Extract the word
             word_start = i
             while i < len(sql) and sql[i].isalnum() or sql[i] == '_':
                 i += 1
@@ -358,7 +360,7 @@ def format_sql_keywords(sql):
 
 def on_key_release(event):
     global is_running_query
-    if not is_running_query:  # Only format if not running a query
+    if not is_running_query:
         query = query_text.get("1.0", tk.END).strip()
         formatted_query = format_sql_keywords(query)
         query_text.delete("1.0", tk.END)
@@ -366,34 +368,27 @@ def on_key_release(event):
         highlight_sql()
 
 def update_status_bar(execution_msg, row_count, status):
-    """Update the status bar with execution info"""
-    # Update execution time
     status_exec_label.config(text=execution_msg)
     
-    # Update row count
     if status == "success":
         status_rows_label.config(text=f"Rows: {row_count}", fg="green")
     else:
         status_rows_label.config(text="Error", fg="red")
     
-    # Update database name (in case it changed)
     status_db_label.config(text=f"DB: {current_db}")
 
 def get_current_treeview():
-    """Return the Treeview widget from the currently selected tab, or None."""
     current_tab = results_notebook.select()
     if not current_tab:
         return None
     tab_frame = results_notebook.nametowidget(current_tab)
     
-    # First, check direct children
     for child in tab_frame.winfo_children():
         if isinstance(child, ttk.Treeview):
             return child
     
-    # If not found, check one level deeper (inside container frame)
     for child in tab_frame.winfo_children():
-        if isinstance(child, tk.Frame) or isinstance(child, ttk.Frame):
+        if isinstance(child, (tk.Frame, ttk.Frame)):
             for grandchild in child.winfo_children():
                 if isinstance(grandchild, ttk.Treeview):
                     return grandchild
@@ -403,22 +398,17 @@ def get_current_treeview():
 # ------------------- History Functions -------------------
 
 def refresh_history_list():
-    """Refresh the history treeview"""
     if 'history_tree' not in globals():
         return
     
-    # Clear existing items
     for item in history_tree.get_children():
         history_tree.delete(item)
     
-    # Add all history entries
     history_entries = get_history()
     for i, entry in enumerate(history_entries):
-        # Truncate query for display
         query_preview = entry['query'][:60] + "..." if len(entry['query']) > 60 else entry['query']
-        query_preview = query_preview.replace('\n', ' ')  # Remove newlines
+        query_preview = query_preview.replace('\n', ' ')
         
-        # Color code by result type
         tags = ('success',) if entry['result_type'] == 'success' else ('error',)
         
         history_tree.insert("", "end", values=(
@@ -428,7 +418,6 @@ def refresh_history_list():
         ), tags=tags)
 
 def on_history_double_click(event):
-    """Load query from history into query box"""
     selected = history_tree.selection()
     if not selected:
         return
@@ -444,24 +433,19 @@ def on_history_double_click(event):
         query_text.focus_set()
 
 def show_history_context_menu(event):
-    """Show right-click menu on history item"""
-    # Select the item under cursor
     item = history_tree.identify_row(event.y)
     if item:
         history_tree.selection_set(item)
         
-        # Create context menu
         context_menu = tk.Menu(root, tearoff=0)
         context_menu.add_command(label="Load Query", command=lambda: on_history_double_click(None))
         context_menu.add_command(label="Delete Entry", command=delete_history_entry_gui)
         context_menu.add_separator()
         context_menu.add_command(label="Clear All History", command=clear_history_gui)
         
-        # Show menu at cursor position
         context_menu.post(event.x_root, event.y_root)
 
 def delete_history_entry_gui():
-    """Delete selected history entry"""
     selected = history_tree.selection()
     if not selected:
         return
@@ -471,7 +455,6 @@ def delete_history_entry_gui():
         refresh_history_list()
 
 def clear_history_gui():
-    """Clear all history with confirmation"""
     if messagebox.askyesno("Clear History", "Clear all query history?"):
         clear_history()
         refresh_history_list()
@@ -495,7 +478,6 @@ def save_new_snippet_gui():
     if name:
         save_current_as_snippet(name, sql)
         refresh_snippet_list()
-        # Update status bar
         status_snippet_label.config(text=f"Saved: {name[:30]}...")
 
 def edit_snippet_gui():
@@ -506,7 +488,6 @@ def edit_snippet_gui():
     old_name = snippet_listbox.get(selection[0])
     for s in get_filtered_snippets(search_entry.get()):
         if s["name"] == old_name:
-            # Use custom dialog instead of simpledialog
             dialog = EditSnippetDialog(root, "Edit Snippet", s["name"], s["sql"])
             root.wait_window(dialog.dialog)
             
@@ -570,7 +551,6 @@ def clear_all():
         if tab_name != "History":
             results_notebook.forget(tab)
 
-    # Add empty placeholder tab
     empty_tab = ttk.Frame(results_notebook)
     results_notebook.add(empty_tab, text="Results")
     empty_tree = ttk.Treeview(empty_tab)
@@ -587,10 +567,8 @@ def copy_treeview_to_clipboard(tree):
         messagebox.showwarning("No Data", "Nothing to copy.")
         return
 
-    # Header row
     lines = ["\t".join(columns)]
 
-    # Data rows
     for child in tree.get_children():
         values = tree.item(child)["values"]
         values = ["" if v is None else str(v) for v in values]
@@ -598,10 +576,9 @@ def copy_treeview_to_clipboard(tree):
 
     text = "\n".join(lines)
 
-    # Copy to clipboard
     root.clipboard_clear()
     root.clipboard_append(text)
-    root.update()  # keeps clipboard after app closes
+    root.update()
 
     messagebox.showinfo("Copied", "Result table copied to clipboard.\nPaste directly into Excel.")
 
@@ -641,32 +618,24 @@ def on_snippet_arrow(delta):
 
     load_current_snippet_from_listbox(set_focus=False)
 
-    return "break"  # ⛔ stop Tkinter default behavior
-
-    load_current_snippet_from_listbox()
+    return "break"
 
 def show_snippet_context_menu(event):
-    """Show right-click menu on snippet"""
-    # Select the item under cursor
     index = snippet_listbox.nearest(event.y)
     if index >= 0:
         snippet_listbox.selection_clear(0, tk.END)
         snippet_listbox.selection_set(index)
         
-        # Create context menu
         context_menu = tk.Menu(root, tearoff=0)
         context_menu.add_command(label="Edit", command=edit_snippet_gui)
         context_menu.add_command(label="Delete", command=delete_snippet_gui)
         
-        # Show menu at cursor position
         context_menu.post(event.x_root, event.y_root)
 
 def on_snippet_drag_start(event):
-    """Store the index when drag starts"""
     snippet_listbox.drag_start_index = snippet_listbox.nearest(event.y)
 
 def on_snippet_drag_motion(event):
-    """Reorder snippet when dragging"""
     if not hasattr(snippet_listbox, 'drag_start_index'):
         return
     
@@ -674,13 +643,11 @@ def on_snippet_drag_motion(event):
     start_index = snippet_listbox.drag_start_index
     
     if current_index != start_index and 0 <= current_index < snippet_listbox.size():
-        # Get the actual snippet name
         snippet_name = snippet_listbox.get(start_index)
         snippets = get_filtered_snippets(search_entry.get())
         actual_index = next((i for i, s in enumerate(snippets) if s["name"] == snippet_name), None)
         
         if actual_index is not None:
-            # Move in data
             from snippets import current_snippets, save_snippets
             if current_index > start_index:
                 for _ in range(current_index - start_index):
@@ -712,13 +679,11 @@ def highlight_sql(event=None):
         start = query_text.index(f"1.0 + {match.start()} chars")
         end = query_text.index(f"1.0 + {match.end()} chars")
         
-        # Replace with uppercase
         query_text.delete(start, end)
         query_text.insert(start, match.group().upper())
         
         query_text.tag_add("keyword", start, end)
     
-    # Refresh content after modifications
     content = query_text.get("1.0", tk.END)
     
     strings = r"('([^'\\]|\\.)*'|\"([^\"\\]|\\.)*\")"
@@ -738,21 +703,87 @@ def schedule_highlight(event=None):
     query_text.after(200, highlight_sql)
 
 def change_database():
-    global conn_str, current_db, db_label  # Add db_label here
-    new_db = simpledialog.askstring("Change Database", "Enter database name:", initialvalue=current_db)
-    if new_db and new_db.strip():
-        current_db = new_db.strip()
-        conn_str = get_conn_str(current_db)
-        root.title(f"SQL Training Tool - Database: {current_db}")
+    global conn_str, current_db, db_label, db_type, sqlite_db_path
+    
+    dialog = tk.Toplevel(root)
+    dialog.title("Select Database Type")
+    dialog.geometry("300x150")
+    dialog.transient(root)
+    dialog.grab_set()
+    
+    tk.Label(dialog, text="Choose database type:", font=("Arial", 11, "bold")).pack(pady=(20, 10))
+    
+    db_type_var = tk.StringVar(value=db_type)
+    
+    frame = tk.Frame(dialog)
+    frame.pack(pady=10)
+    
+    selected_type = [None]
+
+    def on_select(chosen):
+        selected_type[0] = chosen
+        dialog.destroy()
+
+    tk.Button(frame, text="SQL Server", width=14, bg="#4a90e2", fg="white",
+              command=lambda: on_select("sqlserver")).pack(side=tk.LEFT, padx=10)
+    tk.Button(frame, text="SQLite", width=14, bg="#27ae60", fg="white",
+              command=lambda: on_select("sqlite")).pack(side=tk.LEFT, padx=10)
+
+    dialog.wait_window()
+    
+    if not selected_type[0]:
+        return
+    
+    new_db_type = selected_type[0]
+    
+    if new_db_type == "sqlite":
+        from tkinter import filedialog
+        file_path = filedialog.askopenfilename(
+            title="Select SQLite Database",
+            filetypes=[
+                ("SQLite databases", "*.db *.sqlite *.sqlite3"),
+                ("All files", "*.*")
+            ]
+        )
+        if not file_path:
+            return
         
-        # UPDATE THE LABEL
-        db_label.config(text=f"Database: {current_db}")
-        
-        messagebox.showinfo("Database Changed", f"Now connected to: {current_db}")
-        clear_all()  # Clear results
+        sqlite_db_path = file_path
+        current_db = file_path
+        db_type = "sqlite"
+        conn_str = get_conn_str(current_db, db_type)
+
+        import os
+        short = os.path.basename(file_path)
+        root.title(f"SQL Playground - SQLite: {short}")
+        db_label.config(text=f"Database: SQLite ({short})")
+        status_db_label.config(text=f"DB: {short}")
+
+        # *** Notify the SQLite Explorer ***
+        sqlite_explorer.set_database(file_path)
+        # Switch right panel to the Explorer tab
+        right_notebook.select(explorer_tab)
+
+    else:
+        new_db = simpledialog.askstring("Change Database", "Enter database name:", initialvalue=current_db)
+        if new_db and new_db.strip():
+            current_db = new_db.strip()
+            db_type = "sqlserver"
+            conn_str = get_conn_str(current_db, db_type)
+            root.title(f"SQL Training Tool - Database: {current_db}")
+            db_label.config(text=f"Database: {current_db}")
+            messagebox.showinfo("Database Changed", f"Now connected to: {current_db}")
+            # Clear the explorer when switching to SQL Server
+            sqlite_explorer.clear()
+            clear_all()
+            return
+        else:
+            return
+    
+    messagebox.showinfo("Database Changed", f"Now connected to: {db_type.upper()}")
+    clear_all()
 
 def open_web_db():
-    """Open the web database interface in the default browser"""
     webbrowser.open("https://shuflov.github.io/database/")
 
 # ------------------- Main GUI Setup -------------------
@@ -767,26 +798,26 @@ style.theme_use("alt")
 style.configure("Treeview", rowheight=25, font=("Segoe UI", 9))
 style.configure("Treeview.Heading", background="lightblue", font=("Segoe UI", 9, "bold"))
 
-root.grid_columnconfigure(0, weight=1)  # PanedWindow expands
+root.grid_columnconfigure(0, weight=1)
 root.grid_rowconfigure(0, weight=1)
-root.grid_rowconfigure(1, weight=0)  # line for status bar
+root.grid_rowconfigure(1, weight=0)
 
-# --- Main PanedWindow: Horizontal split between left (query/results) and right (snippets) ---
+# --- Main PanedWindow ---
 main_pane = ttk.PanedWindow(root, orient=tk.HORIZONTAL)
 main_pane.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
 
-# Left side: Vertical PanedWindow for query + results
+# Left side
 left_pane = ttk.PanedWindow(main_pane, orient=tk.VERTICAL)
-main_pane.add(left_pane, weight=1)  # weight allows it to shrink/grow
+main_pane.add(left_pane, weight=1)
 
-# Top pane: Query editor + buttons
+# Top pane: Query editor
 top_frame = tk.Frame(left_pane, bg="#f0f0f0")
-left_pane.add(top_frame, weight=1)  # weight allows it to shrink/grow
+left_pane.add(top_frame, weight=1)
 
 top_frame.grid_columnconfigure(0, weight=1)
-top_frame.grid_rowconfigure(1, weight=1)  # Query text expands
+top_frame.grid_rowconfigure(1, weight=1)
 
-# Title row with database info
+# Title row
 title_frame = tk.Frame(top_frame, bg="lightblue")
 title_frame.grid(row=0, column=0, sticky="w", pady=(0, 5))
 
@@ -800,36 +831,29 @@ query_frame.grid(row=1, column=0, sticky="nsew", pady=(0,10))
 query_frame.grid_rowconfigure(0, weight=1)
 query_frame.grid_columnconfigure(1, weight=1)
 
-# Line numbers canvas
 line_numbers = TextLineNumbers(query_frame, None, width=40, bg="#e8e8e8", highlightthickness=0)
 line_numbers.grid(row=0, column=0, sticky="nsew")
 
-# Query text area
 query_text = scrolledtext.ScrolledText(query_frame, height=10, font=("Consolas", 11),
                                       bg="white", fg="black", insertbackground="black", 
                                       relief="sunken", bd=2, wrap="none")
 query_text.grid(row=0, column=1, sticky="nsew")
 
-# Connect line numbers to text widget
 line_numbers.text_widget = query_text
 
-# Syntax highlighting setup (same as before)
 query_text.tag_configure("keyword", foreground="#0000FF", font=("Consolas", 11, "bold"))
 query_text.tag_configure("string", foreground="#008000")
 query_text.tag_configure("comment", foreground="#808080")
 query_text.vbar.configure(command=on_scroll)
 
-# Syntax highlighting setup
 query_text.tag_configure("keyword", foreground="#0000FF", font=("Consolas", 11, "bold"))
 query_text.tag_configure("string", foreground="#008000")
 query_text.tag_configure("comment", foreground="#808080")
 
-# Combined update function
 def update_editor(event=None):
     schedule_highlight(event)
     query_text.after(1, line_numbers.redraw)
 
-# Bind ALL events that might change view or content
 query_text.bind("<KeyPress>", update_editor)
 query_text.bind("<KeyRelease>", on_key_release)
 query_text.bind("<KeyRelease>", update_editor)
@@ -838,15 +862,11 @@ query_text.bind("<MouseWheel>", lambda e: query_text.after(1, line_numbers.redra
 query_text.bind("<Button-1>", lambda e: query_text.after(10, line_numbers.redraw))
 query_text.bind("<ButtonRelease-1>", lambda e: query_text.after(1, line_numbers.redraw))
 
-# Poll for changes regularly (catches everything including scrollbar dragging)
 def poll_line_numbers():
     line_numbers.redraw()
-    query_text.after(100, poll_line_numbers)  # Check every 100ms
+    query_text.after(100, poll_line_numbers)
 
-# Start polling
 query_text.after(100, poll_line_numbers)
-
-# Initial draw
 line_numbers.redraw()
 
 # Buttons row
@@ -858,10 +878,9 @@ left_btn_frame = tk.Frame(btn_frame, bg="lightblue")
 left_btn_frame.grid(row=0, column=0, sticky="w")
 
 tk.Button(left_btn_frame, text="Run Query", command=run_current_query, bg="#c0f405", width=15, cursor="hand2").pack(side=tk.LEFT, padx=2)
-tk.Button(left_btn_frame, text="Clear", bg="#9db1f3",command=clear_all, width=12, cursor="hand2").pack(side=tk.LEFT, padx=2)
+tk.Button(left_btn_frame, text="Clear", bg="#9db1f3", command=clear_all, width=12, cursor="hand2").pack(side=tk.LEFT, padx=2)
 tk.Button(left_btn_frame, text="Save as Snippet", bg="#7391f3", command=save_new_snippet_gui, width=15, cursor="hand2").pack(side=tk.LEFT, padx=2)
 tk.Button(left_btn_frame, text="Play with AI", bg="#b0dc11", command=lambda: show_ai_options_window(query_text, results_notebook), width=15, cursor="hand2").pack(side=tk.LEFT, padx=2)
-
 
 right_btn_frame = tk.Frame(btn_frame, bg="lightblue")
 right_btn_frame.grid(row=0, column=1, sticky="e")
@@ -877,9 +896,8 @@ tk.Button(right_btn_frame, text="Web DB", command=open_web_db,
 
 # Bottom pane: Results notebook
 results_notebook = ttk.Notebook(left_pane)
-left_pane.add(results_notebook, weight=3)  # Give more initial space to results (3:1 ratio)
+left_pane.add(results_notebook, weight=3)
 
-# Initial empty tab
 empty_tab = ttk.Frame(results_notebook)
 results_notebook.add(empty_tab, text="Results")
 empty_tree = ttk.Treeview(empty_tab)
@@ -889,7 +907,6 @@ empty_tree.pack(fill="both", expand=True)
 history_tab = ttk.Frame(results_notebook)
 results_notebook.add(history_tab, text="History")
 
-# History treeview with scrollbars
 history_container = tk.Frame(history_tab)
 history_container.pack(fill="both", expand=True)
 
@@ -912,7 +929,6 @@ history_tree.column("Time", width=150)
 history_tree.column("Query", width=400)
 history_tree.column("Result", width=150)
 
-# Color tags
 history_tree.tag_configure('success', foreground='green')
 history_tree.tag_configure('error', foreground='red')
 
@@ -923,23 +939,30 @@ history_scroll_y.pack(side=tk.RIGHT, fill="y")
 history_scroll_x.pack(side=tk.BOTTOM, fill="x")
 history_tree.pack(side=tk.LEFT, fill="both", expand=True)
 
-# Bindings
 history_tree.bind("<Double-1>", on_history_double_click)
 history_tree.bind("<Button-3>", show_history_context_menu)
 
-# --- RIGHT SIDE (Snippets) ---
-right_frame = tk.Frame(main_pane, width=300, bg="#e1e1e1", relief="sunken", bd=1)
+# ============================================================
+# --- RIGHT SIDE: Notebook with Snippets + SQLite Explorer ---
+# ============================================================
+right_frame = tk.Frame(main_pane, width=310, bg="#e1e1e1", relief="sunken", bd=1)
 right_frame.grid_propagate(False)
-main_pane.add(right_frame, weight=0)  # weight=0 means snippets start at fixed width but can be resized
+main_pane.add(right_frame, weight=0)
 
-tk.Label(right_frame, text="Snippets", bg="#e1e1e1", font=("Arial", 11, "bold")).pack(pady=10)
+right_notebook = ttk.Notebook(right_frame)
+right_notebook.pack(fill="both", expand=True)
 
-search_entry = tk.Entry(right_frame, font=("Arial", 10))
+# ---- Tab 1: Snippets (unchanged) ----
+snippets_tab = tk.Frame(right_notebook, bg="#e1e1e1")
+right_notebook.add(snippets_tab, text="Snippets")
+
+tk.Label(snippets_tab, text="Snippets", bg="#e1e1e1", font=("Arial", 11, "bold")).pack(pady=10)
+
+search_entry = tk.Entry(snippets_tab, font=("Arial", 10))
 search_entry.pack(fill="x", padx=10, pady=5)
 search_entry.bind("<KeyRelease>", lambda e: refresh_snippet_list())
 
-# --- Snippet list with scrollbar ---
-snippet_container = tk.Frame(right_frame, bg="#40138d")
+snippet_container = tk.Frame(snippets_tab, bg="#40138d")
 snippet_container.pack(fill="both", expand=True, padx=10, pady=5)
 
 snippet_scrollbar = tk.Scrollbar(snippet_container, orient="vertical")
@@ -967,67 +990,67 @@ snippet_listbox.bind(
 
 snippet_listbox.focus_set()
 
-snippet_listbox.bind("<Button-3>", show_snippet_context_menu)  # Right-click
-snippet_listbox.bind("<Button-1>", on_snippet_drag_start)  # Left-click start
-snippet_listbox.bind("<B1-Motion>", on_snippet_drag_motion)  # Drag with left button
+snippet_listbox.bind("<Button-3>", show_snippet_context_menu)
+snippet_listbox.bind("<Button-1>", on_snippet_drag_start)
+snippet_listbox.bind("<B1-Motion>", on_snippet_drag_motion)
 
-s_btn_frame = tk.Frame(right_frame, bg="#e1e1e1")
+s_btn_frame = tk.Frame(snippets_tab, bg="#e1e1e1")
 s_btn_frame.pack(fill="x", pady=10)
 
-#tk.Button(s_btn_frame, text="Page Development", bg="#10d931").pack(side=tk.LEFT, padx=5)
-# Change DB button — blue
 tk.Button(s_btn_frame, text="Change DB", command=change_database, width=12,
           bg="#4a90e2", fg="white", relief="raised", cursor="hand2").pack(side=tk.LEFT, padx=(10, 8))
-tk.Button(s_btn_frame, text="Settings", command=lambda: open_settings(root, status_ai_label),width=12,bg="#ebedf0", relief="raised", cursor="hand2").pack(side=tk.LEFT, padx=(0, 8))
+tk.Button(s_btn_frame, text="Settings", command=lambda: open_settings(root, status_ai_label), width=12,
+          bg="#ebedf0", relief="raised", cursor="hand2").pack(side=tk.LEFT, padx=(0, 8))
 
-# --- STATUS BAR at bottom ---
+# ---- Tab 2: SQLite Explorer ----
+explorer_tab = tk.Frame(right_notebook, bg="#e1e1e1")
+right_notebook.add(explorer_tab, text="🗃 DB Explorer")
+
+sqlite_explorer = SQLiteExplorer(
+    parent=explorer_tab,
+    query_text_widget=query_text,
+    highlight_fn=highlight_sql
+)
+
+# --- STATUS BAR ---
 status_bar = tk.Frame(root, bg="#2c3e50", height=30, relief="sunken", bd=1)
 status_bar.grid(row=1, column=0, columnspan=2, sticky="ew")
 status_bar.grid_propagate(False)
 
-# Execution time
 status_exec_label = tk.Label(status_bar, text="Ready", bg="#2c3e50", fg="white", 
                              font=("Arial", 9), anchor="w", padx=10)
 status_exec_label.pack(side=tk.LEFT, fill="x")
 
-# Separator
 tk.Label(status_bar, text="|", bg="#2c3e50", fg="#7f8c8d", font=("Arial", 9)).pack(side=tk.LEFT, padx=5)
 
-# Row count
 status_rows_label = tk.Label(status_bar, text="Rows: -", bg="#2c3e50", fg="#ecf4f4", 
                              font=("Arial", 9), anchor="w")
 status_rows_label.pack(side=tk.LEFT, padx=5)
 
-# Separator
 tk.Label(status_bar, text="|", bg="#2c3e50", fg="#7f8c8d", font=("Arial", 9)).pack(side=tk.LEFT, padx=5)
 
-# Database name
 status_db_label = tk.Label(status_bar, text=f"DB: {current_db}", bg="#2c3e50", fg="#3498db", 
                           font=("Arial", 9, "bold"), anchor="w")
 status_db_label.pack(side=tk.LEFT, padx=5)
 
-
 tk.Label(status_bar, text="|", bg="#2c3e50", fg="#7f8c8d", font=("Arial", 9)).pack(side=tk.LEFT, padx=5)
-# AI Model label
-global status_ai_label  # so we can update it later
+
+global status_ai_label
 status_ai_label = tk.Label(
     status_bar,
-    text=f"AI: groq",  # initial value
+    text="AI: groq",
     bg="#2c3e50",
-    fg="#00d4ff",     # nice cyan/blue for AI
+    fg="#00d4ff",
     font=("Arial", 9, "bold"),
     anchor="w"
 )
 status_ai_label.pack(side=tk.LEFT, padx=5)
 
-# Initialize status label with actual configured provider
 from debug_ai import update_ai_status
 update_ai_status(status_ai_label)
 
-# Separator
 tk.Label(status_bar, text="|", bg="#2c3e50", fg="#7f8c8d", font=("Arial", 9)).pack(side=tk.LEFT, padx=5)
 
-# Last saved snippet
 status_snippet_label = tk.Label(status_bar, text="No snippet saved", bg="#2c3e50", fg="#95a5a6", 
                                font=("Arial", 9, "italic"), anchor="w")
 status_snippet_label.pack(side=tk.LEFT, padx=5)
