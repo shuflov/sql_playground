@@ -930,11 +930,40 @@ top_frame.grid_rowconfigure(1, weight=1)
 
 # Title row
 title_frame = tk.Frame(top_frame, bg="lightblue")
-title_frame.grid(row=0, column=0, sticky="w", pady=(0, 5))
+title_frame.grid(row=0, column=0, sticky="ew", pady=(0, 5))
+title_frame.grid_columnconfigure(1, weight=1)
 
-tk.Label(title_frame, text="SQL Query:", bg="lightblue", font=("Arial", 10, "bold")).pack(side=tk.LEFT)
+tk.Label(title_frame, text="SQL Query:", bg="lightblue", font=("Arial", 10, "bold")).grid(row=0, column=0, sticky="w")
 db_label = tk.Label(title_frame, text=f"Database: {current_db}", bg="lightblue", font=("Arial", 10, "italic"), fg="#2c3e50")
-db_label.pack(side=tk.LEFT, padx=(20, 0))
+db_label.grid(row=0, column=1, sticky="w", padx=(20, 0))
+
+db_provider_frame = tk.Frame(title_frame, bg="lightblue")
+db_provider_frame.grid(row=0, column=2, sticky="e")
+
+tk.Label(db_provider_frame, text="DB:", bg="lightblue", fg="#7f8c8d", 
+         font=("Arial", 9), anchor="w").pack(side=tk.LEFT, padx=(0, 2))
+
+db_provider_var = tk.StringVar(value=db_type)
+
+def on_provider_change(*args):
+    """Handle database provider change - trigger database selection"""
+    global _is_setting_provider
+    if _is_setting_provider:
+        return
+    new_provider = db_provider_var.get()
+    if new_provider != db_type:
+        select_database_for_provider(new_provider)
+
+db_provider_var.trace_add("write", on_provider_change)
+
+tk.Radiobutton(db_provider_frame, text="SQLite", variable=db_provider_var, value="sqlite",
+               bg="lightblue", fg="#27ae60", selectcolor="#lightblue", font=("Arial", 9),
+               activebackground="lightblue", activeforeground="#27ae60",
+               cursor="hand2").pack(side=tk.LEFT, padx=2)
+tk.Radiobutton(db_provider_frame, text="MS SQL", variable=db_provider_var, value="sqlserver",
+               bg="lightblue", fg="#4a90e2", selectcolor="#lightblue", font=("Arial", 9),
+               activebackground="lightblue", activeforeground="#4a90e2",
+               cursor="hand2").pack(side=tk.LEFT, padx=2)
 
 # Query editor with line numbers
 query_frame = tk.Frame(top_frame, bg="lightblue")
@@ -1165,43 +1194,9 @@ status_bar = tk.Frame(root, bg="#2c3e50", height=30, relief="sunken", bd=1)
 status_bar.grid(row=1, column=0, columnspan=2, sticky="ew")
 status_bar.grid_propagate(False)
 
-# --- Database Provider Selection (Radio Buttons) ---
-db_provider_frame = tk.Frame(status_bar, bg="#2c3e50")
-db_provider_frame.pack(side=tk.LEFT, padx=(5, 10))
-
-tk.Label(db_provider_frame, text="DB:", bg="#2c3e50", fg="#7f8c8d", 
-         font=("Arial", 9), anchor="w").pack(side=tk.LEFT, padx=(5, 2))
-
-db_provider_var = tk.StringVar(value=db_type)
-
-# Flag to prevent recursive callback when programmatically setting value
-_is_setting_provider = False
-
-def on_provider_change(*args):
-    """Handle database provider change - trigger database selection"""
-    global _is_setting_provider
-    if _is_setting_provider:
-        return
-    new_provider = db_provider_var.get()
-    if new_provider != db_type:
-        # Provider changed, now select the database
-        select_database_for_provider(new_provider)
-
-db_provider_var.trace_add("write", on_provider_change)
-
-tk.Radiobutton(db_provider_frame, text="SQLite", variable=db_provider_var, value="sqlite",
-               bg="#2c3e50", fg="#27ae60", selectcolor="#2c3e50", font=("Arial", 9),
-               activebackground="#2c3e50", activeforeground="#27ae60",
-               cursor="hand2").pack(side=tk.LEFT, padx=2)
-
-tk.Radiobutton(db_provider_frame, text="MS SQL", variable=db_provider_var, value="sqlserver",
-               bg="#2c3e50", fg="#4a90e2", selectcolor="#2c3e50", font=("Arial", 9),
-               activebackground="#2c3e50", activeforeground="#4a90e2",
-               cursor="hand2").pack(side=tk.LEFT, padx=2)
-
 tk.Label(status_bar, text="|", bg="#2c3e50", fg="#7f8c8d", font=("Arial", 9)).pack(side=tk.LEFT, padx=5)
 
-status_exec_label = tk.Label(status_bar, text="Ready", bg="#2c3e50", fg="white", 
+status_exec_label = tk.Label(status_bar, text="Ready", bg="#2c3e50", fg="white",
                              font=("Arial", 9), anchor="w", padx=10)
 status_exec_label.pack(side=tk.LEFT, fill="x")
 
