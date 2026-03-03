@@ -218,86 +218,196 @@ def run_current_query(event=None):
         if db_type == "sqlite":
             conn = sqlite3.connect(conn_str)
             conn.row_factory = sqlite3.Row
+            
+            statements = [s.strip() for s in query.split(';') if s.strip()]
+            result_count = 0
+            has_any_result = False
+            row_count = 0
+            result_infos = []
+            
+            for stmt in statements:
+                cursor = conn.cursor()
+                cursor.execute(stmt)
+                
+                while True:
+                    has_any_result = True
+                    result_count += 1
+                    
+                    tab_frame = ttk.Frame(results_notebook)
+                    
+                    if cursor.description:
+                        cols = [description[0] for description in cursor.description]
+                        results_notebook.add(tab_frame, text=f"Result {result_count}")
+                        
+                        tree = create_scrollable_tree(tab_frame, cols)
+                        
+                        for col in cols:
+                            tree.heading(col, text=col)
+                            tree.column(col, anchor="center", width=120)
+                        
+                        rows = cursor.fetchall()
+                        result_infos.append(f"{len(rows)} rows")
+                        row_count += len(rows)
+                        
+                        if rows:
+                            for i, row in enumerate(rows):
+                                values = ["" if val is None else str(val) for val in row]
+                                tag = "even" if i % 2 == 0 else "odd"
+                                tree.insert("", "end", values=values, tags=(tag,))
+                            autosize_treeview_columns(tree)
+                            
+                            tree.tag_configure("even", background="#f9f9f9")
+                            tree.tag_configure("odd", background="#ffffff")
+                        else:
+                            tree.insert(
+                                "",
+                                "end",
+                                values=["(No rows returned)"] + [""] * (len(cols) - 1)
+                            )
+                    
+                    else:
+                        affected = cursor.rowcount if cursor.rowcount >= 0 else "unknown"
+                        result_infos.append(f"{affected} row(s) affected")
+                        if affected != "unknown":
+                            row_count += affected
+                        
+                        results_notebook.add(tab_frame, text=f"Query {result_count}")
+                        
+                        tree = create_scrollable_tree(tab_frame, ("Message",))
+                        tree.heading("Message", text="Execution Result")
+                        tree.column("Message", anchor="w", width=600)
+                        
+                        tree.insert(
+                            "",
+                            "end",
+                            values=(f"Success: {affected} row(s) affected",)
+                        )
+                        autosize_treeview_columns(tree)
+                    
+                    try:
+                        if not cursor.nextset():
+                            break
+                    except AttributeError:
+                        break
+                
+                cursor.close()
+            
+            conn.commit()
+            conn.close()
+            
+            if not has_any_result:
+                tab_frame = ttk.Frame(results_notebook)
+                results_notebook.add(tab_frame, text="Result")
+                
+                tree = create_scrollable_tree(tab_frame, ("Message",))
+                tree.heading("Message", text="Info")
+                tree.column("Message", anchor="w", width=600)
+                tree.insert("", "end", values=("Query executed successfully.",))
+                
+                result_infos.append("executed successfully")
+            
+            result_info = "; ".join(result_infos) if result_infos else "executed"
+            execution_time = time.time() - start_time
+            add_history_entry(query, "success", result_info)
+            refresh_history_list()
+            update_status_bar(f"Executed in {execution_time:.3f}s", row_count, "success")
+            
+            if results_notebook.index("end") > 1:
+                results_notebook.select(1)
+        
         else:
             conn = pyodbc.connect(conn_str, autocommit=True)
-        cursor = conn.cursor()
-        cursor.execute(query)
-        
-        result_count = 0
-        has_any_result = False
-        row_count = 0
-        result_infos = []
-        
-        while True:
-            has_any_result = True
-            result_count += 1
+            cursor = conn.cursor()
+            cursor.execute(query)
             
-            tab_frame = ttk.Frame(results_notebook)
+            result_count = 0
+            has_any_result = False
+            row_count = 0
+            result_infos = []
             
-            if cursor.description:
-                if db_type == "sqlite":
-                    cols = [description[0] for description in cursor.description]
-                else:
+            while True:
+                has_any_result = True
+                result_count += 1
+                
+                tab_frame = ttk.Frame(results_notebook)
+                
+                if cursor.description:
                     cols = [column[0] for column in cursor.description]
-                results_notebook.add(tab_frame, text=f"Result {result_count}")
-                
-                tree = create_scrollable_tree(tab_frame, cols)
-                
-                for col in cols:
-                    tree.heading(col, text=col)
-                    tree.column(col, anchor="center", width=120)
-                
-                rows = cursor.fetchall()
-                result_infos.append(f"{len(rows)} rows")
-                row_count += len(rows)
-                
-                if rows:
-                    for i, row in enumerate(rows):
-                        values = ["" if val is None else str(val) for val in row]
-                        tag = "even" if i % 2 == 0 else "odd"
-                        tree.insert("", "end", values=values, tags=(tag,))
-                    autosize_treeview_columns(tree)
+                    results_notebook.add(tab_frame, text=f"Result {result_count}")
                     
-                    tree.tag_configure("even", background="#f9f9f9")
-                    tree.tag_configure("odd", background="#ffffff")
+                    tree = create_scrollable_tree(tab_frame, cols)
+                    
+                    for col in cols:
+                        tree.heading(col, text=col)
+                        tree.column(col, anchor="center", width=120)
+                    
+                    rows = cursor.fetchall()
+                    result_infos.append(f"{len(rows)} rows")
+                    row_count += len(rows)
+                    
+                    if rows:
+                        for i, row in enumerate(rows):
+                            values = ["" if val is None else str(val) for val in row]
+                            tag = "even" if i % 2 == 0 else "odd"
+                            tree.insert("", "end", values=values, tags=(tag,))
+                        autosize_treeview_columns(tree)
+                        
+                        tree.tag_configure("even", background="#f9f9f9")
+                        tree.tag_configure("odd", background="#ffffff")
+                    else:
+                        tree.insert(
+                            "",
+                            "end",
+                            values=["(No rows returned)"] + [""] * (len(cols) - 1)
+                        )
+                
                 else:
+                    affected = cursor.rowcount if cursor.rowcount >= 0 else "unknown"
+                    result_infos.append(f"{affected} row(s) affected")
+                    if affected != "unknown":
+                        row_count += affected
+                    
+                    results_notebook.add(tab_frame, text=f"Query {result_count}")
+                    
+                    tree = create_scrollable_tree(tab_frame, ("Message",))
+                    tree.heading("Message", text="Execution Result")
+                    tree.column("Message", anchor="w", width=600)
+                    
                     tree.insert(
                         "",
                         "end",
-                        values=["(No rows returned)"] + [""] * (len(cols) - 1)
+                        values=(f"Success: {affected} row(s) affected",)
                     )
-            
-            else:
-                affected = cursor.rowcount if cursor.rowcount >= 0 else "unknown"
-                result_infos.append(f"{affected} row(s) affected")
-                if affected != "unknown":
-                    row_count += affected
+                    autosize_treeview_columns(tree)
                 
-                results_notebook.add(tab_frame, text=f"Query {result_count}")
+                try:
+                    if not cursor.nextset():
+                        break
+                except AttributeError:
+                    break
+            
+            cursor.close()
+            conn.close()
+            
+            if not has_any_result:
+                tab_frame = ttk.Frame(results_notebook)
+                results_notebook.add(tab_frame, text="Result")
                 
                 tree = create_scrollable_tree(tab_frame, ("Message",))
-                tree.heading("Message", text="Execution Result")
+                tree.heading("Message", text="Info")
                 tree.column("Message", anchor="w", width=600)
+                tree.insert("", "end", values=("Query executed successfully.",))
                 
-                tree.insert(
-                    "",
-                    "end",
-                    values=(f"Success: {affected} row(s) affected",)
-                )
-                autosize_treeview_columns(tree)
+                result_infos.append("executed successfully")
             
-            # nextset() is not supported by SQLite
-            try:
-                if not cursor.nextset():
-                    break
-            except AttributeError:
-                # SQLite doesn't support nextset()
-                break
-        
-        cursor.close()
-        if db_type == "sqlite":
-            conn.commit()
-        conn.close()
+            result_info = "; ".join(result_infos) if result_infos else "executed"
+            execution_time = time.time() - start_time
+            add_history_entry(query, "success", result_info)
+            refresh_history_list()
+            update_status_bar(f"Executed in {execution_time:.3f}s", row_count, "success")
+            
+            if results_notebook.index("end") > 1:
+                results_notebook.select(1)
         
         if not has_any_result:
             tab_frame = ttk.Frame(results_notebook)
