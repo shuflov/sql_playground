@@ -998,11 +998,23 @@ tk.Button(s_btn_frame, text="Settings", command=lambda: open_settings(root, stat
 explorer_tab = tk.Frame(right_notebook, bg="#e1e1e1")
 right_notebook.add(explorer_tab, text="🗃 DB Explorer")
 
+explorer_container = tk.Frame(explorer_tab, bg="#e1e1e1")
+explorer_container.pack(fill="both", expand=True, padx=10, pady=5)
+
 sqlite_explorer = SQLiteExplorer(
-    parent=explorer_tab,
+    parent=explorer_container,
     query_text_widget=query_text,
     highlight_fn=highlight_sql
 )
+
+# Buttons frame for DB Explorer tab
+explorer_btn_frame = tk.Frame(explorer_tab, bg="#e1e1e1")
+explorer_btn_frame.pack(fill="x", pady=10)
+
+tk.Button(explorer_btn_frame, text="Change DB", command=change_database, width=12,
+          bg="#4a90e2", fg="white", relief="raised", cursor="hand2").pack(side=tk.LEFT, padx=(10, 8))
+tk.Button(explorer_btn_frame, text="Settings", command=lambda: open_settings(root, status_ai_label), width=12,
+          bg="#ebedf0", relief="raised", cursor="hand2").pack(side=tk.LEFT, padx=(0, 8))
 
 # --- STATUS BAR ---
 status_bar = tk.Frame(root, bg="#2c3e50", height=30, relief="sunken", bd=1)
