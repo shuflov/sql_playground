@@ -15,7 +15,9 @@ from snippets import (
     delete_snippet,
     save_current_as_snippet,
     move_snippet_up,
-    move_snippet_down
+    move_snippet_down,
+    set_provider_filter,
+    get_provider_filter
 )
 from export import export_results
 from debug_ai import show_ai_options_window, update_ai_status
@@ -149,7 +151,8 @@ def on_scroll(*args):
 
 def refresh_snippet_list():
     search_term = search_entry.get()
-    filtered = get_filtered_snippets(search_term)
+    provider = get_provider_filter()
+    filtered = get_filtered_snippets(search_term, provider)
     
     selected_name = None
     selection = snippet_listbox.curselection()
@@ -166,6 +169,10 @@ def refresh_snippet_list():
                 snippet_listbox.selection_set(i)
                 snippet_listbox.see(i)
                 break
+
+def on_provider_filter_change(provider):
+    set_provider_filter(provider)
+    refresh_snippet_list()
 
 # Dynamic connection string
 current_db = "test"  # default
@@ -469,7 +476,7 @@ def load_selected_snippet(event=None):
     selection = snippet_listbox.curselection()
     if not selection: return
     name = snippet_listbox.get(selection[0])
-    for s in get_filtered_snippets(search_entry.get()):
+    for s in get_filtered_snippets(search_entry.get(), get_provider_filter()):
         if s["name"] == name:
             query_text.delete("1.0", tk.END)
             query_text.insert("1.0", s["sql"])
@@ -482,7 +489,8 @@ def save_new_snippet_gui():
     if not sql: return
     name = simpledialog.askstring("Save Snippet", "Enter snippet name:")
     if name:
-        save_current_as_snippet(name, sql)
+        provider = "sqlite" if db_type == "sqlite" else "mssql"
+        save_current_as_snippet(name, sql, provider)
         refresh_snippet_list()
         status_snippet_label.config(text=f"Saved: {name[:30]}...")
 
@@ -492,13 +500,14 @@ def edit_snippet_gui():
         return
     
     old_name = snippet_listbox.get(selection[0])
-    for s in get_filtered_snippets(search_entry.get()):
+    for s in get_filtered_snippets(search_entry.get(), get_provider_filter()):
         if s["name"] == old_name:
             dialog = EditSnippetDialog(root, "Edit Snippet", s["name"], s["sql"])
             root.wait_window(dialog.dialog)
             
             if dialog.result_name and dialog.result_sql:
-                edit_snippet(old_name, dialog.result_name, dialog.result_sql)
+                provider = s.get("provider", "mssql")
+                edit_snippet(old_name, dialog.result_name, dialog.result_sql, provider)
                 refresh_snippet_list()
             break
 
@@ -517,7 +526,7 @@ def move_snippet_up_gui():
     displayed_idx = selection[0]
     name = snippet_listbox.get(displayed_idx)
     
-    for i, s in enumerate(get_filtered_snippets("")):
+    for i, s in enumerate(get_filtered_snippets("", get_provider_filter())):
         if s["name"] == name:
             if move_snippet_up(i) is not None:
                 refresh_snippet_list()
@@ -536,7 +545,7 @@ def move_snippet_down_gui():
         return
     name = snippet_listbox.get(displayed_idx)
     
-    for i, s in enumerate(get_filtered_snippets("")):
+    for i, s in enumerate(get_filtered_snippets("", get_provider_filter())):
         if s["name"] == name:
             if move_snippet_down(i) is not None:
                 refresh_snippet_list()
@@ -596,7 +605,7 @@ def load_current_snippet_from_listbox(set_focus=False):
     index = selection[0]
     name = snippet_listbox.get(index)
 
-    for s in get_filtered_snippets(search_entry.get()):
+    for s in get_filtered_snippets(search_entry.get(), get_provider_filter()):
         if s["name"] == name:
             query_text.delete("1.0", tk.END)
             query_text.insert("1.0", s["sql"])
@@ -650,7 +659,7 @@ def on_snippet_drag_motion(event):
     
     if current_index != start_index and 0 <= current_index < snippet_listbox.size():
         snippet_name = snippet_listbox.get(start_index)
-        snippets = get_filtered_snippets(search_entry.get())
+        snippets = get_filtered_snippets(search_entry.get(), get_provider_filter())
         actual_index = next((i for i, s in enumerate(snippets) if s["name"] == snippet_name), None)
         
         if actual_index is not None:
@@ -949,6 +958,31 @@ snippets_tab = tk.Frame(right_notebook, bg="#e1e1e1")
 right_notebook.add(snippets_tab, text="Snippets")
 
 tk.Label(snippets_tab, text="Snippets", bg="#e1e1e1", font=("Arial", 11, "bold")).pack(pady=10)
+
+# Provider filter buttons
+filter_frame = tk.Frame(snippets_tab, bg="#e1e1e1")
+filter_frame.pack(fill="x", padx=10, pady=(0, 5))
+
+filter_var = tk.StringVar(value="all")
+
+def on_filter_change():
+    val = filter_var.get()
+    if val == "all":
+        on_provider_filter_change(None)
+    elif val == "sqlite":
+        on_provider_filter_change("sqlite")
+    elif val == "mssql":
+        on_provider_filter_change("mssql")
+
+tk.Radiobutton(filter_frame, text="All", variable=filter_var, value="all",
+               bg="#e1e1e1", font=("Arial", 9), command=on_filter_change,
+               activebackground="#e1e1e1", cursor="hand2").pack(side=tk.LEFT, padx=5)
+tk.Radiobutton(filter_frame, text="SQLite", variable=filter_var, value="sqlite",
+               bg="#e1e1e1", fg="#27ae60", font=("Arial", 9), command=on_filter_change,
+               activebackground="#e1e1e1", activeforeground="#27ae60", cursor="hand2").pack(side=tk.LEFT, padx=5)
+tk.Radiobutton(filter_frame, text="MSSQL", variable=filter_var, value="mssql",
+               bg="#e1e1e1", fg="#4a90e2", font=("Arial", 9), command=on_filter_change,
+               activebackground="#e1e1e1", activeforeground="#4a90e2", cursor="hand2").pack(side=tk.LEFT, padx=5)
 
 search_entry = tk.Entry(snippets_tab, font=("Arial", 10))
 search_entry.pack(fill="x", padx=10, pady=5)

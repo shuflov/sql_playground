@@ -7,6 +7,9 @@ SNIPPETS_FILE = "snippets.json"
 # The full list of snippets — this will be loaded and updated
 current_snippets = []
 
+# Current provider filter (None = all)
+provider_filter = None
+
 def load_snippets():
     global current_snippets
     try:
@@ -24,24 +27,38 @@ def save_snippets():
         json.dump(current_snippets, f, indent=4)
 
 # These functions now only work with data — GUI is handled outside
-def get_filtered_snippets(search_term=""):
+def get_filtered_snippets(search_term="", provider=None):
     search_term = search_term.lower()
+    filtered = current_snippets[:]
+    
+    if provider:
+        filtered = [s for s in filtered if s.get("provider") == provider]
+    
     if not search_term:
-        return current_snippets[:]
-    return [s for s in current_snippets if search_term in s["name"].lower()]
+        return filtered
+    return [s for s in filtered if search_term in s["name"].lower()]
 
-def add_snippet(name, sql):
+def set_provider_filter(provider):
+    global provider_filter
+    provider_filter = provider
+
+def get_provider_filter():
+    return provider_filter
+
+def add_snippet(name, sql, provider="mssql"):
     global current_snippets
-    current_snippets.append({"name": name, "sql": sql})
+    current_snippets.append({"name": name, "sql": sql, "provider": provider})
     save_snippets()
 
-def edit_snippet(old_name, new_name, new_sql):
+def edit_snippet(old_name, new_name, new_sql, provider=None):
     global current_snippets
     # First try to find by exact old name
     for snippet in current_snippets:
         if snippet["name"] == old_name:
             snippet["name"] = new_name.strip()
             snippet["sql"] = new_sql.strip()
+            if provider:
+                snippet["provider"] = provider
             save_snippets()
             return True
     
@@ -54,7 +71,7 @@ def delete_snippet(name):
     current_snippets = [s for s in current_snippets if s["name"] != name]
     save_snippets()
 
-def save_current_as_snippet(name, current_sql):
+def save_current_as_snippet(name, current_sql, provider="mssql"):
     global current_snippets
     for i, snippet in enumerate(current_snippets):
         if snippet["name"] == name:
@@ -62,7 +79,7 @@ def save_current_as_snippet(name, current_sql):
             save_snippets()
             return True
     # New snippet
-    current_snippets.append({"name": name, "sql": current_sql})
+    current_snippets.append({"name": name, "sql": current_sql, "provider": provider})
     save_snippets()
     return True
 
