@@ -957,11 +957,11 @@ def on_provider_change(*args):
 db_provider_var.trace_add("write", on_provider_change)
 
 tk.Radiobutton(db_provider_frame, text="SQLite", variable=db_provider_var, value="sqlite",
-               bg="lightblue", fg="#27ae60", selectcolor="#lightblue", font=("Arial", 9),
+               bg="lightblue", fg="#27ae60", selectcolor="lightblue", font=("Arial", 9),
                activebackground="lightblue", activeforeground="#27ae60",
                cursor="hand2").pack(side=tk.LEFT, padx=2)
 tk.Radiobutton(db_provider_frame, text="MS SQL", variable=db_provider_var, value="sqlserver",
-               bg="lightblue", fg="#4a90e2", selectcolor="#lightblue", font=("Arial", 9),
+               bg="lightblue", fg="#4a90e2", selectcolor="lightblue", font=("Arial", 9),
                activebackground="lightblue", activeforeground="#4a90e2",
                cursor="hand2").pack(side=tk.LEFT, padx=2)
 

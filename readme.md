@@ -18,6 +18,8 @@ A powerful, offline/online SQL training application built with Python and Tkinte
 - **Dual Database Support**: Switch between Microsoft SQL Server and SQLite databases seamlessly
 
 ### Snippets Management
+- **Provider Filtering**: Filter snippets by database type (All / SQLite / MSSQL)
+- **Auto-tagging**: Snippets are automatically tagged with the current database provider when saved
 - **Drag & Drop Reordering**: Click and drag snippets to reorder them
 - **Right-Click Context Menu**: Edit or delete snippets with right-click
 - **Search/Filter**: Type in the search box to instantly filter snippets
@@ -201,6 +203,12 @@ python main.py
 
 ### Changing Database
 
+**Using the Title Bar:**
+- The DB provider selector (SQLite / MS SQL) is in the title bar on the top right
+- Click the radio button to switch between providers
+- The current database name is shown next to "SQL Query:" label
+
+**Using the Change DB Button:**
 1. Click **Change DB** button (blue button in snippets section)
 2. Enter new database name
 3. App reconnects and updates the title
@@ -209,6 +217,16 @@ python main.py
 ### Using SQLite
 
 The app supports both Microsoft SQL Server and SQLite databases.
+
+**Multiple Statements:**
+- In SQLite mode, you can run multiple SQL statements at once by separating them with semicolons
+- Each SELECT statement will show in a separate result tab
+- Example:
+  ```sql
+  SELECT * FROM users;
+  SELECT * FROM orders WHERE total > 100;
+  INSERT INTO logs VALUES ('action completed');
+  ```
 
 **Switching to SQLite:**
 1. Click the **Settings** button (gear icon) in the right panel
@@ -312,6 +330,9 @@ git commit -m "Initial commit"
 ## 📊 Recent Changes
 
 ### Latest Updates:
+✅ Multiple SQL statements — run multiple queries at once in SQLite (separated by semicolons)
+✅ Snippets provider filtering — filter snippets by SQLite, MSSQL, or All
+✅ DB provider selector moved — SQLite/MS SQL radio buttons now in title bar (top right)
 ✅ SQLite support — work with local .db/.sqlite files
 ✅ SQLite Explorer panel — tree view of tables, views, indexes, and columns
 ✅ Dual database mode — switch between SQL Server and SQLite via Settings
